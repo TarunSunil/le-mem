@@ -1,0 +1,106 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  memories  Memory[]
+  entities  Entity[]
+}
+
+model Memory {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content     String
+  rawInput    String
+  contentType ContentType @default(TEXT)
+  embedding   Unsupported("vector(1536)")?
+  summary     String?
+  tags        String[]
+  fileUrl     String?
+  sourceUrl   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  entities    MemoryEntity[]
+  
+  @@index([userId, createdAt])
+}
+
+model Entity {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  type        EntityType
+  summary     String?
+  attributes  Json       @default("{}")
+  embedding   Unsupported("vector(1536)")?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  memories    MemoryEntity[]
+  
+  // self-referential for relationships (Arjun → Google)
+  fromRelations EntityRelation[] @relation("FromEntity")
+  toRelations   EntityRelation[] @relation("ToEntity")
+  
+  @@unique([userId, name, type])
+  @@index([userId, type])
+}
+
+model EntityRelation {
+  id           String   @id @default(cuid())
+  fromEntityId String
+  toEntityId   String
+  label        String   // e.g. "works at", "mentioned in", "related to"
+  strength     Float    @default(1.0)
+  
+  fromEntity Entity @relation("FromEntity", fields: [fromEntityId], references: [id], onDelete: Cascade)
+  toEntity   Entity @relation("ToEntity", fields: [toEntityId], references: [id], onDelete: Cascade)
+  
+  @@unique([fromEntityId, toEntityId, label])
+}
+
+model MemoryEntity {
+  memoryId String
+  entityId String
+  
+  memory Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  
+  @@id([memoryId, entityId])
+}
+
+enum ContentType {
+  TEXT
+  IMAGE
+  AUDIO
+  PDF
+  LINK
+  CONTEXT_UPDATE
+}
+
+enum EntityType {
+  PERSON
+  PLACE
+  PROJECT
+  EVENT
+  HEALTH
+  TRAVEL
+  TOPIC
+  ORGANIZATION
+}

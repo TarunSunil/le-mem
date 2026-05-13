@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Le Mem - Smart Retrieval</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#690005",
+                        "inverse-primary": "#5d5e60",
+                        "surface-bright": "#393939",
+                        "tertiary-container": "#f0dbff",
+                        "surface-variant": "#353534",
+                        "on-tertiary": "#490080",
+                        "surface-container-high": "#2a2a2a",
+                        "secondary-container": "#3131c0",
+                        "surface-container": "#201f1f",
+                        "on-secondary-fixed": "#07006c",
+                        "surface": "#131313",
+                        "on-primary-fixed-variant": "#454749",
+                        "secondary-fixed": "#e1e0ff",
+                        "surface-container-highest": "#353534",
+                        "secondary": "#c0c1ff",
+                        "on-primary-fixed": "#1a1c1d",
+                        "primary-container": "#e2e2e4",
+                        "tertiary-fixed": "#f0dbff",
+                        "tertiary-fixed-dim": "#ddb7ff",
+                        "on-surface-variant": "#c5c7c9",
+                        "on-secondary": "#1000a9",
+                        "surface-tint": "#c6c6c8",
+                        "on-tertiary-fixed-variant": "#6900b3",
+                        "tertiary": "#ffffff",
+                        "on-tertiary-container": "#8a33d9",
+                        "surface-container-lowest": "#0e0e0e",
+                        "error-container": "#93000a",
+                        "background": "#131313",
+                        "on-tertiary-fixed": "#2c0051",
+                        "on-background": "#e5e2e1",
+                        "outline": "#8f9194",
+                        "on-secondary-fixed-variant": "#2f2ebe",
+                        "surface-dim": "#131313",
+                        "on-surface": "#e5e2e1",
+                        "error": "#ffb4ab",
+                        "primary-fixed-dim": "#c6c6c8",
+                        "outline-variant": "#44474a",
+                        "surface-container-low": "#1c1b1b",
+                        "on-secondary-container": "#b0b2ff",
+                        "secondary-fixed-dim": "#c0c1ff",
+                        "primary": "#ffffff",
+                        "on-primary-container": "#636466",
+                        "primary-fixed": "#e2e2e4",
+                        "on-error-container": "#ffdad6",
+                        "on-primary": "#2f3132",
+                        "inverse-on-surface": "#313030",
+                        "inverse-surface": "#e5e2e1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "safe-area": "32px",
+                        "container-padding": "24px",
+                        "section-margin": "40px",
+                        "element-gap": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Newsreader"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Newsreader"],
+                        "display-lg": ["Newsreader"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "400" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #0A0A0A; color: #e5e2e1; }
+        .glass-panel {
+            background-color: rgba(18, 18, 18, 0.6);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            z-index: -1;
+            pointer-events: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md min-h-screen flex flex-col pb-safe-area pt-24 md:pt-32">
+<!-- Ambient Light Leaks -->
+<div class="glow-orb w-96 h-96 bg-tertiary-container top-0 left-1/4"></div>
+<div class="glow-orb w-64 h-64 bg-secondary-container bottom-1/4 right-0"></div>
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/60 dark:bg-surface/60 backdrop-blur-3xl border-b border-white/10 flex items-center justify-between px-container-padding h-16 transition-all duration-300 ease-in-out md:hidden">
+<div class="flex items-center gap-4 text-on-surface-variant dark:text-on-surface-variant hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-primary dark:text-primary">bubble_chart</span>
+</div>
+<div class="font-headline-md text-headline-md tracking-tighter text-on-surface dark:text-on-surface font-medium">
+            Le Mem
+        </div>
+<div class="flex items-center gap-4 text-on-surface-variant dark:text-on-surface-variant hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-primary dark:text-primary">search</span>
+</div>
+</header>
+<!-- Web Navigation (Hidden on Mobile) -->
+<nav class="hidden md:flex fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-3xl border-b border-white/10 items-center justify-between px-12 h-20">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl">bubble_chart</span>
+<span class="font-headline-lg text-headline-lg tracking-tighter text-on-surface">Le Mem</span>
+</div>
+<div class="flex gap-6 ml-12">
+<a class="text-on-surface-variant font-label-md text-label-md flex items-center gap-2 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">chat_bubble</span> Flow</a>
+<a class="text-on-surface-variant font-label-md text-label-md flex items-center gap-2 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">hub</span> Contexts</a>
+<a class="text-on-surface-variant font-label-md text-label-md flex items-center gap-2 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">timeline</span> Timeline</a>
+<a class="text-on-surface-variant font-label-md text-label-md flex items-center gap-2 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">schema</span> Map</a>
+<a class="text-primary font-label-md text-label-md flex items-center gap-2 bg-tertiary-container/10 px-4 py-2 rounded-full" href="#"><span class="material-symbols-outlined">manage_search</span> Search</a>
+</div>
+</div>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-white/10">
+<img alt="User" class="w-full h-full object-cover" data-alt="A close-up portrait of a thoughtful person in soft, low-light conditions, conveying a calm and introspective mood consistent with a refined, minimalist aesthetic. The lighting highlights subtle facial features against a dark, moody background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5klsCF4Da3ZYN0oUqB_dRs3iUjVupfqqUmThW5ty-dtswo62mr5CFXeWqueiJEnQblO7G9g8bDxYmgF5CH9bWa8H4j5ecxd-cxQQaZfWPfYxdv5F9DFRoxbV1ZUl4Wit76-KXbEAkS0r_DqwPDa0AaIj6l2eUphYtr7r6YHGifxU8rzG5aGK00DYVUGfs4_8FoRPSnphD0QmSmiVQ3N6-1IbxccUpIB68UwAF_H3Vpm0l3UfgQCYmORs1264fhjcCB_SmqVDp6Tsv"/>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-container-padding md:px-12 max-w-5xl mx-auto w-full flex flex-col gap-section-margin relative z-10">
+<!-- Search Header -->
+<section class="flex flex-col gap-element-gap items-center text-center mt-8 md:mt-16">
+<h1 class="font-display-lg text-display-lg text-primary">Smart Retrieval</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-lg">Access your fragmented memories through semantic search. Ask naturally.</p>
+<div class="w-full max-w-2xl mt-6 relative group">
+<span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-surface-container rounded-full py-5 pl-16 pr-6 text-on-surface font-body-lg text-body-lg border-none focus:ring-1 focus:ring-primary/30 transition-shadow placeholder-on-surface-variant/50 glass-panel" placeholder="What are you looking for?" type="text"/>
+</div>
+</section>
+<!-- Suggested Queries (Bento style) -->
+<section class="flex flex-col gap-element-gap w-full max-w-4xl mx-auto">
+<h2 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest pl-2">Suggested Inquiries</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<button class="glass-panel p-6 rounded-xl flex flex-col gap-3 text-left hover:bg-surface-container-high transition-colors group">
+<span class="material-symbols-outlined text-tertiary-fixed-dim bg-tertiary-container/10 w-10 h-10 flex items-center justify-center rounded-full">location_on</span>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary">What was that Japanese cafe?</span>
+</button>
+<button class="glass-panel p-6 rounded-xl flex flex-col gap-3 text-left hover:bg-surface-container-high transition-colors group">
+<span class="material-symbols-outlined text-secondary-fixed-dim bg-secondary-container/10 w-10 h-10 flex items-center justify-center rounded-full">summarize</span>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary">Summarize my F1 notes</span>
+</button>
+<button class="glass-panel p-6 rounded-xl flex flex-col gap-3 text-left hover:bg-surface-container-high transition-colors group">
+<span class="material-symbols-outlined text-primary-fixed-dim bg-primary-container/10 w-10 h-10 flex items-center justify-center rounded-full">health_and_beauty</span>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary">Find the skin routine from 3 months ago</span>
+</button>
+</div>
+</section>
+<!-- Search Results Area -->
+<section class="flex flex-col gap-section-margin w-full max-w-4xl mx-auto mt-8">
+<!-- Context Group 1: People & Entities -->
+<div class="flex flex-col gap-element-gap">
+<div class="flex items-center gap-3 border-b border-white/5 pb-2">
+<span class="material-symbols-outlined text-on-surface-variant">person_search</span>
+<h3 class="font-headline-md text-headline-md text-primary">Found in People</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Entity Card -->
+<div class="glass-panel rounded-xl p-1 flex gap-4 items-center bg-[#121212] border-none shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] hover:bg-surface-container transition-colors cursor-pointer">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 m-3">
+<img alt="Sarah Chen" class="w-full h-full object-cover" data-alt="A muted, stylized portrait of an elegant woman looking off-camera, set against a dark, minimalist background. The lighting is soft and cinematic, emphasizing deep shadows and calm intelligence, matching a high-end personal AI interface aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8c_6bKMGrefvcEQ0fi_RK8s1fzg7UoTcA7t2ZHrap4gKFtePj-9f956LKUcUFeCmC1XtwWOxQwEGmx-N-jaYdjJCbQeX72ABCtiV3a0rPy7P2BqloY08WHoLQuwjoxE5sCDpLRWRYvdnVzUWBZ-AWD1e4z3NeMOEmms3_l0z1NdWxRqS-uKyTYfWNhHb5BZy-cLoDRdlpEbIIDbc396h9UzbhC3qdjllc-tt91R3CutQqjNz9dRh7Ia7NEebDmvP_2v7MKwL7pI3o"/>
+</div>
+<div class="flex flex-col gap-1 pr-4">
+<span class="font-label-sm text-label-sm text-on-tertiary-container bg-tertiary-container/20 w-max px-2 py-0.5 rounded-full mb-1">Colleague</span>
+<h4 class="font-body-lg text-body-lg text-on-surface">Sarah Chen</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">Discussed the Q3 roadmap and the new design system launch.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Context Group 2: Timeline Snippets -->
+<div class="flex flex-col gap-element-gap">
+<div class="flex items-center gap-3 border-b border-white/5 pb-2">
+<span class="material-symbols-outlined text-on-surface-variant">history</span>
+<h3 class="font-headline-md text-headline-md text-primary">Message Snippets</h3>
+</div>
+<div class="flex flex-col gap-4">
+<!-- Message Snippet -->
+<div class="glass-panel rounded-xl p-6 bg-[#121212] border-none shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-secondary-container opacity-50"></div>
+<div class="flex justify-between items-start mb-3">
+<span class="font-label-md text-label-md text-on-surface-variant">Oct 12, 2023 • Morning Walk</span>
+<span class="material-symbols-outlined text-on-surface-variant/50 group-hover:text-primary transition-colors cursor-pointer">open_in_new</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface leading-relaxed">
+                            "Remembered that the <span class="bg-tertiary-container/20 text-tertiary-fixed-dim px-1 rounded">Japanese cafe</span> we went to with Mark was called 'Kurasu'. They had that amazing matcha espresso fusion. Need to take Sarah there next time she visits."
+                        </p>
+</div>
+</div>
+</div>
+<!-- Context Group 3: Projects -->
+<div class="flex flex-col gap-element-gap">
+<div class="flex items-center gap-3 border-b border-white/5 pb-2">
+<span class="material-symbols-outlined text-on-surface-variant">folder_special</span>
+<h3 class="font-headline-md text-headline-md text-primary">Project Contexts</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Context Card -->
+<div class="glass-panel rounded-xl p-6 bg-[#121212] border-none shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface">notes</span>
+</div>
+<div>
+<h4 class="font-body-lg text-body-lg text-on-surface">F1 2024 Analysis</h4>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Last updated 2 days ago</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">Aggregated notes on aerodynamics changes and team principal strategies for the upcoming season.</p>
+<div class="flex gap-2 mt-auto">
+<span class="font-label-sm text-label-sm px-3 py-1 rounded-full bg-surface-container text-on-surface">Sports</span>
+<span class="font-label-sm text-label-sm px-3 py-1 rounded-full bg-surface-container text-on-surface">Analysis</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom padding for nav -->
+<div class="h-24 md:h-0 w-full"></div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-lg bg-transparent md:hidden">
+<div class="bg-surface/60 dark:bg-surface/60 backdrop-blur-3xl fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-8 pt-4">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform" href="#">
+<span class="material-symbols-outlined font-label-sm text-label-sm">chat_bubble</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform" href="#">
+<span class="material-symbols-outlined font-label-sm text-label-sm">hub</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform" href="#">
+<span class="material-symbols-outlined font-label-sm text-label-sm">timeline</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform" href="#">
+<span class="material-symbols-outlined font-label-sm text-label-sm">schema</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-tertiary-container dark:bg-on-tertiary text-on-tertiary-container dark:text-tertiary-container rounded-full p-3 Active: scale-95 transition-all duration-200" href="#">
+<span class="material-symbols-outlined font-label-sm text-label-sm" style="font-variation-settings: 'FILL' 1;">manage_search</span>
+</a>
+</div>
+</nav>
+</body></html>

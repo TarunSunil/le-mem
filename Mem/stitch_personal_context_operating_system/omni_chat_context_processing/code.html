@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Le Mem - Chat</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Newsreader:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error": "#690005",
+                      "inverse-primary": "#5d5e60",
+                      "surface-bright": "#393939",
+                      "tertiary-container": "#f0dbff",
+                      "surface-variant": "#353534",
+                      "on-tertiary": "#490080",
+                      "surface-container-high": "#2a2a2a",
+                      "secondary-container": "#3131c0",
+                      "surface-container": "#201f1f",
+                      "on-secondary-fixed": "#07006c",
+                      "surface": "#131313",
+                      "on-primary-fixed-variant": "#454749",
+                      "secondary-fixed": "#e1e0ff",
+                      "surface-container-highest": "#353534",
+                      "secondary": "#c0c1ff",
+                      "on-primary-fixed": "#1a1c1d",
+                      "primary-container": "#e2e2e4",
+                      "tertiary-fixed": "#f0dbff",
+                      "tertiary-fixed-dim": "#ddb7ff",
+                      "on-surface-variant": "#c5c7c9",
+                      "on-secondary": "#1000a9",
+                      "surface-tint": "#c6c6c8",
+                      "on-tertiary-fixed-variant": "#6900b3",
+                      "tertiary": "#ffffff",
+                      "on-tertiary-container": "#8a33d9",
+                      "surface-container-lowest": "#0e0e0e",
+                      "error-container": "#93000a",
+                      "background": "#131313",
+                      "on-tertiary-fixed": "#2c0051",
+                      "on-background": "#e5e2e1",
+                      "outline": "#8f9194",
+                      "on-secondary-fixed-variant": "#2f2ebe",
+                      "surface-dim": "#131313",
+                      "on-surface": "#e5e2e1",
+                      "error": "#ffb4ab",
+                      "primary-fixed-dim": "#c6c6c8",
+                      "outline-variant": "#44474a",
+                      "surface-container-low": "#1c1b1b",
+                      "on-secondary-container": "#b0b2ff",
+                      "secondary-fixed-dim": "#c0c1ff",
+                      "primary": "#ffffff",
+                      "on-primary-container": "#636466",
+                      "primary-fixed": "#e2e2e4",
+                      "on-error-container": "#ffdad6",
+                      "on-primary": "#2f3132",
+                      "inverse-on-surface": "#313030",
+                      "inverse-surface": "#e5e2e1"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "unit": "4px",
+                      "safe-area": "32px",
+                      "container-padding": "24px",
+                      "section-margin": "40px",
+                      "element-gap": "16px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Newsreader"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Newsreader"
+                      ],
+                      "display-lg": [
+                              "Newsreader"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "40px",
+                              {
+                                      "lineHeight": "48px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body { background-color: #0A0A0A; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#0A0A0A] text-on-background font-body-md text-body-md h-screen flex flex-col overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-surface/60 dark:bg-surface/60 backdrop-blur-3xl fixed top-0 w-full z-50 border-b border-white/10 flex items-center justify-between px-container-padding h-16 transition-all duration-300 ease-in-out md:hidden">
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:opacity-80 transition-opacity p-2 -ml-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">bubble_chart</span>
+</button>
+<h1 class="font-headline-md text-headline-md tracking-tighter text-on-surface dark:text-on-surface">Le Mem</h1>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:opacity-80 transition-opacity p-2 -mr-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">search</span>
+</button>
+</header>
+<!-- Desktop Navigation Drawer (Hidden on mobile) -->
+<div class="hidden md:flex flex-row h-full">
+<nav class="bg-surface dark:bg-surface text-primary dark:text-primary font-body-md text-body-md h-full w-80 rounded-r-lg shadow-xl flex flex-col py-safe gap-element-gap border-r border-surface-container-low shrink-0 z-40">
+<!-- Header Profile -->
+<div class="flex flex-col items-start px-container-padding mb-8 mt-4">
+<div class="w-12 h-12 rounded-full bg-surface-container-high overflow-hidden mb-4 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">person</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Personal OS</h2>
+<p class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1 mt-1">
+<span class="w-2 h-2 rounded-full bg-secondary-container inline-block"></span> Online &amp; Syncing
+                </p>
+<span class="font-label-sm text-label-sm text-outline mt-2">V1.0</span>
+</div>
+<!-- Nav Links -->
+<div class="flex flex-col gap-2 flex-grow px-2">
+<a class="bg-secondary-container dark:bg-secondary-container text-on-secondary-container rounded-full mx-2 px-4 py-3 flex items-center gap-3 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+                    Personal Space
+                </a>
+<a class="text-on-surface-variant dark:text-on-surface-variant mx-2 px-4 py-3 flex items-center gap-3 hover:bg-surface-variant/50 rounded-full transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">folder_special</span>
+                    Project Contexts
+                </a>
+<a class="text-on-surface-variant dark:text-on-surface-variant mx-2 px-4 py-3 flex items-center gap-3 hover:bg-surface-variant/50 rounded-full transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">history_toggle_off</span>
+                    Archived Memories
+                </a>
+</div>
+<div class="mt-auto px-2 pb-4">
+<a class="text-on-surface-variant dark:text-on-surface-variant mx-2 px-4 py-3 flex items-center gap-3 hover:bg-surface-variant/50 rounded-full transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+                    System Settings
+                </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full relative overflow-hidden bg-[#0A0A0A]">
+<!-- Subtle Indigo/Violet Aura Background -->
+<div class="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-transparent to-violet-900/10 pointer-events-none"></div>
+<!-- Desktop Top Bar -->
+<header class="hidden md:flex bg-transparent w-full z-50 flex items-center justify-between px-container-padding py-6">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Chat</h1>
+<button class="bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface p-3 rounded-full flex items-center justify-center border border-white/5">
+<span class="material-symbols-outlined">search</span>
+</button>
+</header>
+<!-- Chat Scroll Area -->
+<div class="flex-1 overflow-y-auto px-4 md:px-container-padding pt-20 md:pt-4 pb-48 flex flex-col gap-section-margin relative z-10">
+<!-- Day Marker -->
+<div class="flex justify-center my-4">
+<span class="bg-surface-container/50 px-4 py-1 rounded-full font-label-sm text-label-sm text-on-surface-variant backdrop-blur-md border border-white/5">Today</span>
+</div>
+<!-- AI Message -->
+<div class="flex flex-col gap-2 items-start max-w-3xl relative">
+<div class="absolute -inset-4 bg-violet-500/5 blur-xl rounded-full -z-10"></div>
+<div class="flex items-center gap-2 mb-1">
+<div class="w-6 h-6 rounded-full bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px] text-tertiary-fixed-dim">bubble_chart</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Le Mem</span>
+</div>
+<div class="bg-surface/80 backdrop-blur-sm border border-white/5 rounded-2xl rounded-tl-sm p-4 text-on-surface font-body-md text-body-md shadow-lg shadow-black/20">
+                        Good morning. I've compiled your notes from yesterday's brainstorming session. Would you like me to extract the action items?
+                    </div>
+</div>
+<!-- User Message: Text -->
+<div class="flex flex-col gap-2 items-end max-w-3xl self-end relative">
+<div class="absolute -inset-4 bg-indigo-500/5 blur-xl rounded-full -z-10"></div>
+<div class="bg-surface-container-high/80 backdrop-blur-sm border border-white/10 rounded-2xl rounded-tr-sm p-4 text-on-surface font-body-md text-body-md">
+                        Yes, please. Also, I had an idea about the new user flow. We should simplify the onboarding to just three steps.
+                    </div>
+<div class="flex gap-2 flex-wrap justify-end mt-1">
+<span class="bg-surface/50 border border-secondary-container/30 px-3 py-1 rounded-full font-label-sm text-label-sm text-secondary-container backdrop-blur-sm">New Idea</span>
+<span class="bg-surface/50 border border-secondary-container/30 px-3 py-1 rounded-full font-label-sm text-label-sm text-secondary-container backdrop-blur-sm">UX</span>
+</div>
+</div>
+<!-- Fluid Message: Processing Document -->
+<div class="flex justify-center my-6">
+<div class="bg-surface-container/60 backdrop-blur-md border border-secondary-container/30 rounded-2xl p-3 flex items-center gap-4 max-w-sm shadow-lg shadow-black/20">
+<div class="relative flex items-center justify-center shrink-0">
+<div class="absolute inset-0 rounded-full border-2 border-secondary-container border-t-transparent animate-spin"></div>
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-secondary-container text-[20px]">description</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Analyzing Health Context...</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">Linking to Oct 10 Lab Results</span>
+</div>
+</div>
+</div>
+<!-- User Message: Rich Content (Image) -->
+<div class="flex flex-col gap-2 items-end max-w-3xl self-end mt-4 relative">
+<div class="absolute -inset-4 bg-indigo-500/5 blur-xl rounded-full -z-10"></div>
+<div class="bg-surface-container-highest/80 backdrop-blur-sm border border-white/10 rounded-2xl p-2 w-full max-w-sm overflow-hidden">
+<img alt="Tokyo trip inspiration" class="w-full h-48 object-cover rounded-xl mb-2" data-alt="A cinematic, high-contrast photograph of Tokyo at night, capturing the neon-lit streets of Shinjuku. The scene is illuminated by vibrant neon signs in pink, cyan, and deep purple, reflecting off the wet asphalt. The mood is moody and electric, characteristic of a cyberpunk aesthetic. The architectural details are sharp, creating a bustling, energetic metropolitan atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUINfQLdr43krkxyH2nq_VYsbBz45ff9HGaLi4zPUfZoPunSZsE55-vCgYpaFlKF0iNSvd-O3dZb-eU21FObiTeQwDy5zFdTXyEGRbr9vfisdL7Qy9_fz-NzuW7uWi9m0UIxyYx6jnpF75aTqpopmb_8EQLjixMftsW2Whh4a9KjDWkmUqxBYdqUOHOCdIQi671EU7xcqCjz377Ts36qr-Dmf0h0xcfM6EdelThdVdaXU4UJNRd60ggcnhEsyE_REBr-Sou1SZhXI0"/>
+<p class="px-2 pb-2 text-on-surface font-body-md text-body-md">Vibe check for the upcoming Tokyo campaign.</p>
+</div>
+</div>
+</div>
+<!-- Input Area -->
+<div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent pt-12 pb-safe px-4 md:px-container-padding z-40 md:mb-0 mb-20 flex flex-col items-center">
+<!-- System Feedback Chip -->
+<div class="mb-4 bg-surface-container-high/80 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full font-label-sm text-label-sm text-on-surface flex items-center gap-2 max-w-full shadow-lg">
+<span class="material-symbols-outlined text-secondary-container text-[16px]">info</span>
+<span class="truncate">Recognized Arjun from Google. Would you like to link this to the AI Ethics Project?</span>
+</div>
+<!-- Input Box -->
+<div class="w-full max-w-3xl bg-surface/40 backdrop-blur-2xl border border-white/20 rounded-[32px] p-2 flex items-end gap-2 shadow-2xl shadow-black/50 relative">
+<!-- Subtle AI Glow behind input -->
+<div class="absolute inset-0 rounded-[32px] bg-secondary-container/10 blur-xl -z-10"></div>
+<button class="p-3 text-on-surface-variant hover:text-on-surface transition-colors rounded-full shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined">add</span>
+</button>
+<textarea class="w-full bg-transparent border-none focus:ring-0 text-on-surface font-body-md text-body-md resize-none py-3 px-2 max-h-32 placeholder-on-surface-variant/50" placeholder="Message Le Mem..." rows="1" style="min-height: 48px;"></textarea>
+<button class="p-3 text-on-surface-variant hover:text-on-surface transition-colors rounded-full shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined">mic</span>
+</button>
+<button class="p-3 bg-secondary-container text-on-secondary-container rounded-full shrink-0 flex items-center justify-center hover:bg-secondary-container/80 transition-all ml-1 active:scale-95 animate-pulse">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+</div>
+</main>
+</div>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="bg-surface/60 dark:bg-surface/60 backdrop-blur-3xl font-label-sm text-label-sm text-tertiary-fixed-dim dark:text-tertiary-fixed-dim fixed bottom-0 w-full z-50 rounded-t-lg bg-transparent flat no shadows fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-8 pt-4 md:hidden">
+<button class="flex flex-col items-center justify-center bg-tertiary-container dark:bg-on-tertiary text-on-tertiary-container dark:text-tertiary-container rounded-full p-3 hover:scale-110 transition-transform Active: scale-95 transition-all duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat_bubble</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform Active: scale-95 transition-all duration-200">
+<span class="material-symbols-outlined">hub</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform Active: scale-95 transition-all duration-200">
+<span class="material-symbols-outlined">timeline</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform Active: scale-95 transition-all duration-200">
+<span class="material-symbols-outlined">schema</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform Active: scale-95 transition-all duration-200">
+<span class="material-symbols-outlined">manage_search</span>
+</button>
+</nav>
+<style>
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</body></html>

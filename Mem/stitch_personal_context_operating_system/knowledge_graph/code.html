@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Knowledge Graph - Le Mem</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#690005",
+                        "inverse-primary": "#5d5e60",
+                        "surface-bright": "#393939",
+                        "tertiary-container": "#f0dbff",
+                        "surface-variant": "#353534",
+                        "on-tertiary": "#490080",
+                        "surface-container-high": "#2a2a2a",
+                        "secondary-container": "#3131c0",
+                        "surface-container": "#201f1f",
+                        "on-secondary-fixed": "#07006c",
+                        "surface": "#131313",
+                        "on-primary-fixed-variant": "#454749",
+                        "secondary-fixed": "#e1e0ff",
+                        "surface-container-highest": "#353534",
+                        "secondary": "#c0c1ff",
+                        "on-primary-fixed": "#1a1c1d",
+                        "primary-container": "#e2e2e4",
+                        "tertiary-fixed": "#f0dbff",
+                        "tertiary-fixed-dim": "#ddb7ff",
+                        "on-surface-variant": "#c5c7c9",
+                        "on-secondary": "#1000a9",
+                        "surface-tint": "#c6c6c8",
+                        "on-tertiary-fixed-variant": "#6900b3",
+                        "tertiary": "#ffffff",
+                        "on-tertiary-container": "#8a33d9",
+                        "surface-container-lowest": "#0e0e0e",
+                        "error-container": "#93000a",
+                        "background": "#131313",
+                        "on-tertiary-fixed": "#2c0051",
+                        "on-background": "#e5e2e1",
+                        "outline": "#8f9194",
+                        "on-secondary-fixed-variant": "#2f2ebe",
+                        "surface-dim": "#131313",
+                        "on-surface": "#e5e2e1",
+                        "error": "#ffb4ab",
+                        "primary-fixed-dim": "#c6c6c8",
+                        "outline-variant": "#44474a",
+                        "surface-container-low": "#1c1b1b",
+                        "on-secondary-container": "#b0b2ff",
+                        "secondary-fixed-dim": "#c0c1ff",
+                        "primary": "#ffffff",
+                        "on-primary-container": "#636466",
+                        "primary-fixed": "#e2e2e4",
+                        "on-error-container": "#ffdad6",
+                        "on-primary": "#2f3132",
+                        "inverse-on-surface": "#313030",
+                        "inverse-surface": "#e5e2e1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "safe-area": "32px",
+                        "container-padding": "24px",
+                        "section-margin": "40px",
+                        "element-gap": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Newsreader"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Newsreader"],
+                        "display-lg": ["Newsreader"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "400" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #0A0A0A; color: #e5e2e1; }
+        
+        /* Subtle glow effects for graph background */
+        .aura-bg {
+            background: radial-gradient(circle at 30% 40%, rgba(49, 49, 192, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 70% 60%, rgba(138, 51, 217, 0.1) 0%, transparent 40%);
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* SVG Graph Lines */
+        .graph-line {
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1px;
+            fill: none;
+        }
+        
+        .graph-line.highlight {
+            stroke: rgba(138, 51, 217, 0.4);
+            stroke-width: 2px;
+            filter: drop-shadow(0 0 4px rgba(138, 51, 217, 0.5));
+        }
+
+        /* Hide scrollbar for clean canvas look */
+        ::-webkit-scrollbar { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased min-h-screen relative overflow-hidden font-body-md text-body-md selection:bg-secondary-container selection:text-on-secondary-container">
+<!-- Background Aura -->
+<div class="aura-bg"></div>
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/60 dark:bg-surface/60 backdrop-blur-3xl flex items-center justify-between px-container-padding h-16 transition-all duration-300 ease-in-out border-b border-white/10 hidden md:flex">
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:opacity-80 transition-opacity flex items-center justify-center p-2 rounded-full hover:bg-surface-variant/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">bubble_chart</span>
+</button>
+<h1 class="font-headline-md text-headline-md tracking-tighter text-on-surface dark:text-on-surface">Le Mem</h1>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:opacity-80 transition-opacity flex items-center justify-center p-2 rounded-full hover:bg-surface-variant/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">search</span>
+</button>
+</header>
+<!-- Navigation Drawer (Desktop) -->
+<aside class="fixed top-0 left-0 h-full w-80 rounded-r-lg bg-surface dark:bg-surface shadow-xl flex flex-col py-safe gap-element-gap z-40 hidden md:flex border-r border-surface-container-low mt-16">
+<div class="px-container-padding py-6">
+<div class="flex items-center gap-4 mb-8">
+<div class="w-12 h-12 rounded-full bg-surface-variant overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A sophisticated close-up portrait of a user profile avatar. The lighting is soft and moody, reflecting the calm intelligence aesthetic. The image features deep blacks and translucent, ethereal skin tones against a dark, minimalist void background, conveying a sense of quiet focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzTtNQwpaF1s8QAmfwWMXVUAfO3P9e6JjWo5peI5m96Qz83BwT3ur79yMUlEoomrItHkXj3dWFtXVmE7p0rH-NoooKBsjB6x3NWIXq4YrWMuaqT73c-ZWoSmFWrVxtXvHaSKZkHYsBelrKGg4ekD4zessFfaui8652nqBoyi9UijSZz9I8osGcINwIaF4Hd-H2oEhFA9NE0A4cPH2Esv7MT7E1zAjF5CJGRIyeM5DKdW2DQsNLsnlCIazwM3SlEuGO9_0jDKA4_AqA"/>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Personal OS</h2>
+<p class="font-body-md text-body-md text-on-surface-variant opacity-70">Online &amp; Syncing • V1.0</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-4 text-on-surface-variant dark:text-on-surface-variant mx-2 px-4 py-3 rounded-full hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-body-md text-body-md">Personal Space</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant dark:text-on-surface-variant mx-2 px-4 py-3 rounded-full hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">folder_special</span>
+<span class="font-body-md text-body-md">Project Contexts</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant dark:text-on-surface-variant mx-2 px-4 py-3 rounded-full hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">history_toggle_off</span>
+<span class="font-body-md text-body-md">Archived Memories</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant dark:text-on-surface-variant mx-2 px-4 py-3 rounded-full hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">System Settings</span>
+</a>
+</nav>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="relative w-full h-screen pt-16 md:pl-80 pb-32 md:pb-0 overflow-hidden flex flex-col">
+<!-- Search & Filter Overlay -->
+<div class="absolute top-24 left-1/2 -translate-x-1/2 w-[90%] max-w-lg z-30 md:left-[calc(50%+160px)]">
+<div class="bg-surface/40 backdrop-blur-2xl rounded-full p-2 border border-white/5 flex items-center shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+<span class="material-symbols-outlined text-on-surface-variant ml-4">search</span>
+<input class="bg-transparent border-none text-on-surface font-body-md focus:ring-0 w-full px-4 placeholder-on-surface-variant/50" placeholder="Explore connections..." type="text"/>
+<button class="bg-surface-variant/50 hover:bg-surface-variant text-on-surface p-2 rounded-full transition-colors mr-1">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+</div>
+</div>
+<!-- Graph Canvas Area -->
+<div class="flex-1 relative w-full h-full cursor-move">
+<!-- SVG Lines -->
+<svg class="absolute inset-0 w-full h-full z-10" pointer-events="none">
+<!-- Arjun to Google -->
+<line class="graph-line highlight" x1="30%" x2="45%" y1="40%" y2="25%"></line>
+<!-- Arjun to AI Ethics -->
+<line class="graph-line highlight" x1="30%" x2="50%" y1="40%" y2="55%"></line>
+<!-- Priya to Tokyo Trip -->
+<line class="graph-line" x1="70%" x2="60%" y1="35%" y2="60%"></line>
+<!-- AI Ethics to Nexus Pipeline -->
+<line class="graph-line" x1="50%" x2="65%" y1="55%" y2="75%"></line>
+<!-- Nexus Pipeline to F1 -->
+<line class="graph-line" x1="65%" x2="35%" y1="75%" y2="70%"></line>
+</svg>
+<!-- Nodes Layer -->
+<div class="absolute inset-0 z-20">
+<!-- Node: Arjun (Person - Highlighted) -->
+<div class="absolute top-[40%] left-[30%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center border border-tertiary-container/30 shadow-[0_0_20px_rgba(240,219,255,0.2)] transition-transform hover:scale-110 relative overflow-hidden">
+<div class="absolute inset-0 bg-tertiary-container/10"></div>
+<span class="font-headline-lg text-headline-lg text-tertiary-container">A</span>
+</div>
+<div class="mt-3 text-center">
+<p class="font-headline-md text-[16px] text-on-surface">Arjun</p>
+<span class="text-[10px] uppercase tracking-wider text-on-surface-variant/70 font-label-sm">Person</span>
+</div>
+</div>
+<!-- Node: Priya (Person) -->
+<div class="absolute top-[35%] left-[70%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer opacity-70 hover:opacity-100 transition-opacity">
+<div class="w-14 h-14 rounded-full bg-surface-container flex items-center justify-center border border-white/5 transition-transform hover:scale-110">
+<span class="font-headline-lg text-headline-lg text-on-surface-variant">P</span>
+</div>
+<div class="mt-3 text-center">
+<p class="font-headline-md text-[16px] text-on-surface-variant">Priya</p>
+</div>
+</div>
+<!-- Node: AI Ethics (Topic - Core) -->
+<div class="absolute top-[55%] left-[50%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
+<div class="w-24 h-24 rounded-[2rem] bg-surface-container flex items-center justify-center border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-secondary-container/20 to-transparent"></div>
+<span class="material-symbols-outlined text-[32px] text-secondary">psychology</span>
+</div>
+<div class="mt-4 text-center">
+<p class="font-headline-md text-headline-md text-on-surface">AI Ethics</p>
+<span class="text-[10px] uppercase tracking-wider text-secondary-fixed/70 font-label-sm">Topic</span>
+</div>
+</div>
+<!-- Node: Google (Context) -->
+<div class="absolute top-[25%] left-[45%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer">
+<div class="px-6 py-3 rounded-full bg-surface-container/80 backdrop-blur-md border border-white/5 transition-transform hover:scale-105 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">domain</span>
+<p class="font-body-md text-[14px] text-on-surface">Google</p>
+</div>
+</div>
+<!-- Node: Nexus Pipeline (Project) -->
+<div class="absolute top-[75%] left-[65%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer opacity-80 hover:opacity-100 transition-opacity">
+<div class="px-5 py-4 rounded-2xl bg-surface-container/60 backdrop-blur-md border border-white/5 transition-transform hover:scale-105 flex flex-col items-center">
+<span class="material-symbols-outlined text-[24px] text-on-surface-variant mb-1">schema</span>
+<p class="font-headline-md text-[16px] text-on-surface">Nexus Pipeline</p>
+</div>
+</div>
+<!-- Node: Tokyo Trip (Project) -->
+<div class="absolute top-[60%] left-[60%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
+<div class="w-12 h-12 rounded-full bg-surface-container/50 flex items-center justify-center border border-white/5 transition-transform hover:scale-110">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">flight_takeoff</span>
+</div>
+</div>
+<!-- Node: F1 (Topic) -->
+<div class="absolute top-[70%] left-[35%] -translate-x-1/2 -translate-y-1/2 group cursor-pointer opacity-50 hover:opacity-100 transition-opacity">
+<div class="px-4 py-2 rounded-full bg-surface-container/40 border border-white/5 transition-transform hover:scale-105">
+<p class="font-body-md text-[14px] text-on-surface-variant">Formula 1</p>
+</div>
+</div>
+</div>
+<!-- Zoom Controls (Bottom Right) -->
+<div class="absolute bottom-6 right-6 z-30 flex flex-col gap-2 bg-surface/50 backdrop-blur-xl p-2 rounded-full border border-white/5">
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-variant/50 transition-colors">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-variant/50 transition-colors">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface hover:bg-surface-variant/50 transition-colors mt-2">
+<span class="material-symbols-outlined text-[20px]">center_focus_strong</span>
+</button>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-8 pt-4 bg-surface/60 dark:bg-surface/60 backdrop-blur-3xl rounded-t-lg bg-transparent md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">chat_bubble</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">hub</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">timeline</span>
+</a>
+<!-- Active: Schema / Graph -->
+<a class="flex flex-col items-center justify-center bg-tertiary-container dark:bg-on-tertiary text-on-tertiary-container dark:text-tertiary-container rounded-full p-3 hover:scale-110 transition-transform scale-95 transition-all duration-200 shadow-[0_0_15px_rgba(138,51,217,0.3)]" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">schema</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant p-3 hover:scale-110 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">manage_search</span>
+</a>
+</nav>
+</body></html>
