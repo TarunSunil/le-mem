@@ -31,7 +31,7 @@ export default async function ContextDetailPage({
         <section className="glass-panel border border-white/10 p-6 md:p-8">
           <div className="flex flex-wrap items-center gap-3">
             <span className="rounded-full bg-secondary-container px-3 py-1 text-label-sm text-on-secondary-container">
-              {context.type}
+              {context.label}
             </span>
             <span className="rounded-full border border-white/10 px-3 py-1 text-label-sm text-on-surface-variant">
               Auto-generated wiki page

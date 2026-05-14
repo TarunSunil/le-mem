@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { GraphData, EntityType } from "@/types";
-import { TARUN_GRAPH_DATA } from "@/lib/tarun-context";
+import { TARUN_GRAPH_DATA } from "@/lib/context-registry";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,

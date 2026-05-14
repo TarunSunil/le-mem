@@ -3,7 +3,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { TARUN_SEARCH_RESULTS, TARUN_SUGGESTIONS } from "@/lib/tarun-context";
+import { TARUN_SEARCH_RESULTS, TARUN_SUGGESTIONS } from "@/lib/context-registry";
 
 const SUGGESTED_QUERIES = TARUN_SUGGESTIONS;
 

@@ -3,7 +3,7 @@
 import { ChatInput } from "@/components/chat/ChatInput";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { SuggestionChips } from "@/components/chat/SuggestionChips";
-import { TARUN_CHAT_SEED } from "@/lib/tarun-context";
+import { TARUN_CHAT_SEED } from "@/lib/context-registry";
 import { useState, useRef, useEffect } from "react";
 
 interface Message {
@@ -36,6 +36,7 @@ export default function ChatPage() {
       // Call the chat API with streaming
       const response = await fetch("/api/chat", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [...messages, userMessage].map((m) => ({
@@ -46,7 +47,26 @@ export default function ChatPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to send message");
+        let errorMessage = `Failed to send message (${response.status})`;
+
+        try {
+          const contentType = response.headers.get("content-type") ?? "";
+          if (contentType.includes("application/json")) {
+            const errorBody = await response.json();
+            if (errorBody?.error) {
+              errorMessage = errorBody.error;
+            }
+          } else {
+            const errorText = await response.text();
+            if (errorText.trim()) {
+              errorMessage = errorText;
+            }
+          }
+        } catch {
+          // Keep status-based fallback when error parsing fails.
+        }
+
+        throw new Error(errorMessage);
       }
 
       // Handle streaming response

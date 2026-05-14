@@ -1,12 +1,12 @@
 // src/app/(main)/contexts/page.tsx
 
 import Link from "next/link";
-import { CONTEXTS } from "@/lib/context-registry";
+import { CONTEXT_GROUPS } from "@/lib/context-registry";
 
 const STATS = [
-  ["6", "contexts active"],
+  ["9", "contexts active"],
   ["18", "linked memories"],
-  ["7", "profile categories"],
+  ["6", "categories"],
 ];
 
 export default function ContextsPage() {
@@ -46,45 +46,78 @@ export default function ContextsPage() {
           ))}
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {CONTEXTS.map((context) => (
-            <Link
-              key={context.id}
-              href={`/contexts/${context.id}`}
-              className="group rounded-3xl border border-white/10 bg-white/5 p-5 transition-colors hover:border-white/20 hover:bg-white/8"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-label-sm uppercase tracking-[0.24em]" style={{ color: context.accent }}>
-                    {context.label}
-                  </p>
-                  <h2 className="mt-2 text-2xl font-newsreader" style={{ color: "#e5e2e1" }}>
-                    {context.title}
-                  </h2>
-                  {context.categories ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {context.categories.slice(0, 4).map((category) => (
-                        <span
-                          key={category}
-                          className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-label-sm text-on-surface-variant"
-                        >
-                          {category}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/20 text-on-surface-variant transition-colors group-hover:bg-secondary-container group-hover:text-on-secondary-container">
-                  <span className="material-symbols-outlined text-xl">arrow_forward</span>
-                </div>
-              </div>
+        {/* Render contexts grouped by category */}
+        {CONTEXT_GROUPS.map((group) => (
+          <div key={group.id} className="mt-10">
+            {/* Category header */}
+            <div className="mb-6">
+              <h2 className="font-newsreader text-2xl md:text-3xl" style={{ color: "#e5e2e1" }}>
+                {group.title}
+              </h2>
+              {group.description && (
+                <p className="mt-2 text-body-sm md:text-body-md" style={{ color: "#c5c7c9" }}>
+                  {group.description}
+                </p>
+              )}
+            </div>
 
-              <p className="mt-4 text-body-md leading-7" style={{ color: "#c5c7c9" }}>
-                {context.summary}
-              </p>
-            </Link>
-          ))}
-        </div>
+            {/* Contexts in group */}
+            {group.contexts.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {group.contexts.map((context) => (
+                  <Link
+                    key={context.id}
+                    href={`/contexts/${context.id}`}
+                    className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 transition-all hover:border-white/20 hover:bg-white/10"
+                  >
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <span
+                            className="mb-2 inline-block rounded-full px-2 py-1 text-label-xs"
+                            style={{
+                              backgroundColor: `${context.accent}20`,
+                              color: context.accent,
+                            }}
+                          >
+                            {context.label}
+                          </span>
+                          <h3 className="mt-3 font-newsreader text-xl leading-tight" style={{ color: "#e5e2e1" }}>
+                            {context.title}
+                          </h3>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-body-sm" style={{ color: "#c5c7c9" }}>
+                        {context.summary}
+                      </p>
+                      {context.categories && context.categories.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {context.categories.slice(0, 3).map((cat) => (
+                            <span
+                              key={cat}
+                              className="rounded-full border border-white/10 px-2 py-1 text-label-xs"
+                              style={{ color: "#c5c7c9" }}
+                            >
+                              {cat}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      className="absolute inset-0 -z-10 opacity-0 transition-opacity group-hover:opacity-20"
+                      style={{ backgroundColor: context.accent }}
+                    />
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center">
+                <p style={{ color: "#c5c7c9" }}>No items in this category yet</p>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { TARUN_SUGGESTIONS } from "@/lib/tarun-context";
+import { TARUN_SUGGESTIONS } from "@/lib/context-registry";
 
 const SUGGESTIONS = TARUN_SUGGESTIONS;
 
