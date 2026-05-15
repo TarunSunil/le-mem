@@ -18,6 +18,11 @@ const newsreader = Newsreader({
 export const metadata: Metadata = {
   title: "Le Mem - Personal Memory OS",
   description: "AI-powered personal memory operating system",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

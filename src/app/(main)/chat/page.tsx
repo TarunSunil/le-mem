@@ -3,7 +3,6 @@
 import { ChatInput } from "@/components/chat/ChatInput";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { SuggestionChips } from "@/components/chat/SuggestionChips";
-import { TARUN_CHAT_SEED } from "@/lib/context-registry";
 import { useState, useRef, useEffect } from "react";
 
 interface Message {
@@ -13,7 +12,7 @@ interface Message {
 }
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>(TARUN_CHAT_SEED);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -154,14 +153,25 @@ export default function ChatPage() {
           <SuggestionChips onSuggest={handleSendMessage} />
 
           <section className="space-y-3">
-            {messages.map((message, index) => (
-              <MessageBubble
-                key={`${message.role}-${index}`}
-                role={message.role}
-                content={message.content}
-                contexts={message.contexts}
-              />
-            ))}
+            {messages.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-6 md:p-8">
+                <p className="text-body-lg" style={{ color: "#e5e2e1" }}>
+                  Start a new memory thread.
+                </p>
+                <p className="mt-2 max-w-2xl text-body-md leading-7" style={{ color: "#c5c7c9" }}>
+                  Ask about an internship, paste a note, or describe a project and Le Mem will extract the entities and keep the context ready.
+                </p>
+              </div>
+            ) : (
+              messages.map((message, index) => (
+                <MessageBubble
+                  key={`${message.role}-${index}`}
+                  role={message.role}
+                  content={message.content}
+                  contexts={message.contexts}
+                />
+              ))
+            )}
             {error && (
               <div
                 className="rounded-lg border border-red-500 bg-red-500/10 p-4"

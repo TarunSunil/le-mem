@@ -25,7 +25,7 @@ export default function LoginPage() {
         </button>
 
         <p className="text-center text-label-sm mt-8" style={{color: "#c5c7c9"}}>
-          Coming soon...
+          If sign-in fails, check that your Google OAuth client and NextAuth secret env vars are set.
         </p>
       </div>
     </div>

@@ -1,19 +1,31 @@
 import { authOptions } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { getServerSession } from "next-auth/next";
 
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
-    const token = await getToken({ req, secret: authOptions.secret });
-    if (!token?.email) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      if (!authOptions.providers.length) {
+        return NextResponse.json(
+          {
+            error:
+              "Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, then restart the app.",
+          },
+          { status: 503 }
+        );
+      }
+
       return NextResponse.json(
-        { error: "Session expired or unauthorized. Please sign in again." },
+        { error: "No active session found. Please sign in again." },
         { status: 401 }
       );
     }
 
-    const { messages } = await req.json();
+    const { messages } = (await req.json()) as {
+      messages?: Array<{ role: string; content: string }>;
+    };
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -40,7 +52,7 @@ When the user shares information, ask clarifying questions to better understand 
 Format responses clearly with markdown when helpful.`;
 
     // Convert messages to Gemini format
-    const contents = messages.map((msg: any) => ({
+    const contents = messages.map((msg) => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }],
     }));
