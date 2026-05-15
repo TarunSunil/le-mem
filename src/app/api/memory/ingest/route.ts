@@ -1,9 +1,11 @@
 // src/app/api/memory/ingest/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { authOptions } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { embedText } from "@/lib/ai/embed";
 import { extractEntities } from "@/lib/ai/extract-entities";
 import { ContentType, EntityType } from "@/types";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,10 +14,22 @@ export async function POST(request: NextRequest) {
       contentType = "TEXT",
       fileUrl,
       sourceUrl,
-      userId,
     } = await request.json();
 
-    if (!content || !userId) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (!content) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -32,7 +46,7 @@ export async function POST(request: NextRequest) {
     // 3. Create memory record
     const memory = await prisma.memory.create({
       data: {
-        userId,
+        userId: user.id,
         content,
         rawInput: content,
         contentType: contentType as ContentType,
@@ -50,7 +64,7 @@ export async function POST(request: NextRequest) {
       const entity = await prisma.entity.upsert({
         where: {
           userId_name_type: {
-            userId,
+            userId: user.id,
             name: person.name,
             type: "PERSON",
           },
@@ -62,7 +76,7 @@ export async function POST(request: NextRequest) {
           },
         },
         create: {
-          userId,
+          userId: user.id,
           name: person.name,
           type: "PERSON",
           summary: person.context,
@@ -87,14 +101,14 @@ export async function POST(request: NextRequest) {
       const entity = await prisma.entity.upsert({
         where: {
           userId_name_type: {
-            userId,
+            userId: user.id,
             name: org.name,
             type: "ORGANIZATION",
           },
         },
         update: {},
         create: {
-          userId,
+          userId: user.id,
           name: org.name,
           type: "ORGANIZATION",
           attributes: { type: org.type },
@@ -115,14 +129,14 @@ export async function POST(request: NextRequest) {
       const entity = await prisma.entity.upsert({
         where: {
           userId_name_type: {
-            userId,
+            userId: user.id,
             name: place.name,
             type: "PLACE",
           },
         },
         update: {},
         create: {
-          userId,
+          userId: user.id,
           name: place.name,
           type: "PLACE",
           attributes: { placeType: place.type },
@@ -143,14 +157,14 @@ export async function POST(request: NextRequest) {
       const entity = await prisma.entity.upsert({
         where: {
           userId_name_type: {
-            userId,
+            userId: user.id,
             name: project.name,
             type: "PROJECT",
           },
         },
         update: {},
         create: {
-          userId,
+          userId: user.id,
           name: project.name,
           type: "PROJECT",
           attributes: { status: project.status },
@@ -171,14 +185,14 @@ export async function POST(request: NextRequest) {
       const entity = await prisma.entity.upsert({
         where: {
           userId_name_type: {
-            userId,
+            userId: user.id,
             name: topic.name,
             type: "TOPIC",
           },
         },
         update: {},
         create: {
-          userId,
+          userId: user.id,
           name: topic.name,
           type: "TOPIC",
         },
@@ -198,14 +212,14 @@ export async function POST(request: NextRequest) {
       const entity = await prisma.entity.upsert({
         where: {
           userId_name_type: {
-            userId,
+            userId: user.id,
             name: event.name,
             type: "EVENT",
           },
         },
         update: {},
         create: {
-          userId,
+          userId: user.id,
           name: event.name,
           type: "EVENT",
           attributes: { date: event.date },

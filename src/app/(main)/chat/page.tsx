@@ -3,6 +3,7 @@
 import { ChatInput } from "@/components/chat/ChatInput";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { SuggestionChips } from "@/components/chat/SuggestionChips";
+import { useSession } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 
 interface Message {
@@ -12,10 +13,43 @@ interface Message {
 }
 
 export default function ChatPage() {
+  const { data: session, status } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const storageKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user?.email) {
+      if (storageKeyRef.current) {
+        sessionStorage.removeItem(storageKeyRef.current);
+      }
+
+      storageKeyRef.current = null;
+      setMessages([]);
+      return;
+    }
+
+    const storageKey = `le-mem:chat-history:${session.user.email}`;
+    storageKeyRef.current = storageKey;
+
+    try {
+      const storedMessages = sessionStorage.getItem(storageKey);
+      setMessages(storedMessages ? (JSON.parse(storedMessages) as Message[]) : []);
+    } catch {
+      sessionStorage.removeItem(storageKey);
+      setMessages([]);
+    }
+  }, [session?.user?.email, status]);
+
+  useEffect(() => {
+    if (!storageKeyRef.current) {
+      return;
+    }
+
+    sessionStorage.setItem(storageKeyRef.current, JSON.stringify(messages));
+  }, [messages]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -32,6 +66,39 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
+      const memoryResponse = await fetch("/api/memory/ingest", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content,
+          contentType: "CONTEXT_UPDATE",
+        }),
+      });
+
+      if (!memoryResponse.ok) {
+        let errorMessage = `Failed to save memory (${memoryResponse.status})`;
+
+        try {
+          const contentType = memoryResponse.headers.get("content-type") ?? "";
+          if (contentType.includes("application/json")) {
+            const errorBody = await memoryResponse.json();
+            if (errorBody?.error) {
+              errorMessage = errorBody.error;
+            }
+          } else {
+            const errorText = await memoryResponse.text();
+            if (errorText.trim()) {
+              errorMessage = errorText;
+            }
+          }
+        } catch {
+          // Keep the status-based fallback when error parsing fails.
+        }
+
+        throw new Error(errorMessage);
+      }
+
       // Call the chat API with streaming
       const response = await fetch("/api/chat", {
         method: "POST",

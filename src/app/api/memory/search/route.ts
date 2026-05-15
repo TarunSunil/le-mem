@@ -1,13 +1,28 @@
 // src/app/api/memory/search/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { authOptions } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { embedText } from "@/lib/ai/embed";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, userId, limit = 10 } = await request.json();
+    const { query, limit = 10 } = await request.json();
 
-    if (!query || !userId) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (!query) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -37,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     const memories = await prisma.memory.findMany({
       where: {
-        userId,
+        userId: user.id,
         content: {
           contains: query,
           mode: "insensitive",
@@ -56,7 +71,7 @@ export async function POST(request: NextRequest) {
     // Search entities
     const entities = await prisma.entity.findMany({
       where: {
-        userId,
+        userId: user.id,
         name: {
           contains: query,
           mode: "insensitive",
@@ -65,6 +80,22 @@ export async function POST(request: NextRequest) {
       take: limit,
     });
 
+    const results = [
+      ...memories.map((memory) => ({
+        id: memory.id,
+        type: "MEMORY",
+        title: memory.summary || memory.content.slice(0, 64),
+        summary: memory.summary || memory.content,
+      })),
+      ...entities.map((entity) => ({
+        id: entity.id,
+        type: entity.type,
+        name: entity.name,
+        title: entity.name,
+        summary: entity.summary || entity.name,
+      })),
+    ];
+
     // Group results by type
     const people = entities.filter((e: { type: string }) => e.type === "PERSON");
     const projects = entities.filter((e: { type: string }) => e.type === "PROJECT");
@@ -72,6 +103,7 @@ export async function POST(request: NextRequest) {
     const topics = entities.filter((e: { type: string }) => e.type === "TOPIC");
 
     return NextResponse.json({
+      results,
       memories,
       entities: {
         people,
