@@ -206,25 +206,14 @@ export default function ChatPage() {
           </section>
 
           <section className="space-y-3">
-            {messages.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-6 md:p-8">
-                <p className="text-body-lg" style={{ color: "var(--fyi-text)" }}>
-                  Start a new memory thread.
-                </p>
-                <p className="mt-2 max-w-2xl text-body-md leading-7" style={{ color: "var(--fyi-muted)" }}>
-                  Ask about an internship, paste a note, or describe a project and FYI will keep the context ready.
-                </p>
-              </div>
-            ) : (
-              messages.map((message, index) => (
-                <MessageBubble
-                  key={`${message.role}-${index}`}
-                  role={message.role}
-                  content={message.content}
-                  contexts={message.contexts}
-                />
-              ))
-            )}
+            {messages.length > 0 && messages.map((message, index) => (
+              <MessageBubble
+                key={`${message.role}-${index}`}
+                role={message.role}
+                content={message.content}
+                contexts={message.contexts}
+              />
+            ))}
             {error && (
               <div
                 className="rounded-lg border border-red-500 bg-red-500/10 p-4"

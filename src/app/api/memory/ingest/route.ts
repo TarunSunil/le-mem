@@ -49,6 +49,21 @@ export async function POST(request: NextRequest) {
     // 2. Extract entities
     const extractedData = await extractEntities(content);
 
+    // If extraction returned nothing (e.g., no extraction model configured),
+    // create a fallback topic entity from the content so contexts/graph show up.
+    const totalExtracted =
+      extractedData.people.length +
+      extractedData.organizations.length +
+      extractedData.places.length +
+      extractedData.projects.length +
+      extractedData.topics.length +
+      extractedData.events.length;
+
+    if (totalExtracted === 0) {
+      const fallbackName = (content || "").trim().split("\n")[0].slice(0, 80) || "Note";
+      extractedData.topics.push({ name: fallbackName });
+    }
+
     // 3. Create memory record
     const memory = await prisma.memory.create({
       data: {

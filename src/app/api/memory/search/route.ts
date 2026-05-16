@@ -29,14 +29,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate embedding for query
-    const queryEmbedding = await embedText(query);
-
-    if (!queryEmbedding || queryEmbedding.length === 0) {
-      return NextResponse.json(
-        { error: "Failed to generate query embedding" },
-        { status: 500 }
-      );
+    // Generate embedding for query (optional). If embedding generation fails
+    // or is not configured, fall back to a text-only search.
+    let queryEmbedding: number[] | null = null;
+    try {
+      const emb = await embedText(query);
+      if (emb && emb.length > 0) queryEmbedding = emb;
+      else queryEmbedding = null;
+    } catch (e) {
+      console.warn("Embedding generation skipped or failed:", e);
+      queryEmbedding = null;
     }
 
     // Search memories using raw SQL for pgvector
@@ -111,6 +113,7 @@ export async function POST(request: NextRequest) {
         places,
         topics,
       },
+      usedEmbedding: Boolean(queryEmbedding),
       success: true,
     });
   } catch (error) {
