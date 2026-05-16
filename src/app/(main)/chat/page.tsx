@@ -2,7 +2,6 @@
 
 import { ChatInput } from "@/components/chat/ChatInput";
 import { MessageBubble } from "@/components/chat/MessageBubble";
-import { SuggestionChips } from "@/components/chat/SuggestionChips";
 import { useSession } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 
@@ -21,7 +20,8 @@ export default function ChatPage() {
   const storageKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (status !== "authenticated" || !session?.user?.email) {
+    // Only clear stored messages when the user is definitively signed out.
+    if (status === "unauthenticated") {
       if (storageKeyRef.current) {
         sessionStorage.removeItem(storageKeyRef.current);
       }
@@ -31,15 +31,18 @@ export default function ChatPage() {
       return;
     }
 
-    const storageKey = `le-mem:chat-history:${session.user.email}`;
-    storageKeyRef.current = storageKey;
+    // If authenticated and we have an email, load stored messages.
+    if (status === "authenticated" && session?.user?.email) {
+      const storageKey = `le-mem:chat-history:${session.user.email}`;
+      storageKeyRef.current = storageKey;
 
-    try {
-      const storedMessages = sessionStorage.getItem(storageKey);
-      setMessages(storedMessages ? (JSON.parse(storedMessages) as Message[]) : []);
-    } catch {
-      sessionStorage.removeItem(storageKey);
-      setMessages([]);
+      try {
+        const storedMessages = sessionStorage.getItem(storageKey);
+        setMessages(storedMessages ? (JSON.parse(storedMessages) as Message[]) : []);
+      } catch {
+        sessionStorage.removeItem(storageKey);
+        setMessages([]);
+      }
     }
   }, [session?.user?.email, status]);
 
@@ -58,6 +61,11 @@ export default function ChatPage() {
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return;
+
+    if (status !== "authenticated" || !session?.user?.email) {
+      setError("Please sign in to send messages and save memories.");
+      return;
+    }
 
     // Add user message
     const userMessage: Message = { role: "user", content };
@@ -148,19 +156,16 @@ export default function ChatPage() {
         const chunk = new TextDecoder().decode(value);
         assistantMessage += chunk;
 
-        // Update the assistant message in real-time
+        // Update the assistant message in real-time.
+        // If the last message is already an assistant message, update its content,
+        // otherwise push a new assistant message once.
         setMessages((prev) => {
           const updated = [...prev];
-          if (
-            updated[updated.length - 1]?.role === "assistant" &&
-            updated[updated.length - 1]?.content === assistantMessage.slice(0, -chunk.length)
-          ) {
-            updated[updated.length - 1].content = assistantMessage;
+          const last = updated[updated.length - 1];
+          if (last && last.role === "assistant") {
+            last.content = assistantMessage;
           } else {
-            updated.push({
-              role: "assistant",
-              content: assistantMessage,
-            });
+            updated.push({ role: "assistant", content: assistantMessage });
           }
           return updated;
         });
@@ -180,53 +185,34 @@ export default function ChatPage() {
           <section className="glass-panel border border-white/10 p-6 md:p-8">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full bg-secondary-container px-3 py-1 text-label-sm text-on-secondary-container">
-                Omni-Chat
+                FYI Memory Chat
               </span>
               <span className="rounded-full border border-white/10 px-3 py-1 text-label-sm text-on-surface-variant">
-                Memory extraction on
+                Private context stream
               </span>
             </div>
 
             <div className="mt-5 max-w-2xl">
               <h1
                 className="font-newsreader text-3xl leading-tight md:text-5xl"
-                style={{ color: "#e5e2e1" }}
+                style={{ color: "var(--fyi-text)" }}
               >
-                Talk to your memory like a private chat.
+                Capture your memory stream in one quiet place.
               </h1>
-              <p className="mt-4 text-body-md md:text-body-lg" style={{ color: "#c5c7c9" }}>
-                Dump ideas, images, places, and people. Le Mem will extract the entities, connect the dots, and keep the context ready when you need it.
+              <p className="mt-4 text-body-md md:text-body-lg" style={{ color: "var(--fyi-muted)" }}>
+                Drop notes, projects, and reflections here. FYI will connect the dots and build context pages as you go.
               </p>
             </div>
-
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
-              {[
-                ["142", "memories captured"],
-                ["18", "linked contexts"],
-                ["64%", "retrieval confidence"],
-              ].map(([value, label]) => (
-                <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-2xl font-semibold" style={{ color: "#e5e2e1" }}>
-                    {value}
-                  </div>
-                  <div className="mt-1 text-label-sm" style={{ color: "#c5c7c9" }}>
-                    {label}
-                  </div>
-                </div>
-              ))}
-            </div>
           </section>
-
-          <SuggestionChips onSuggest={handleSendMessage} />
 
           <section className="space-y-3">
             {messages.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-6 md:p-8">
-                <p className="text-body-lg" style={{ color: "#e5e2e1" }}>
+                <p className="text-body-lg" style={{ color: "var(--fyi-text)" }}>
                   Start a new memory thread.
                 </p>
-                <p className="mt-2 max-w-2xl text-body-md leading-7" style={{ color: "#c5c7c9" }}>
-                  Ask about an internship, paste a note, or describe a project and Le Mem will extract the entities and keep the context ready.
+                <p className="mt-2 max-w-2xl text-body-md leading-7" style={{ color: "var(--fyi-muted)" }}>
+                  Ask about an internship, paste a note, or describe a project and FYI will keep the context ready.
                 </p>
               </div>
             ) : (

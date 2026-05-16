@@ -1,4 +1,7 @@
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
 
 type MessageBubbleProps = {
   role: "user" | "assistant";
@@ -16,14 +19,19 @@ export function MessageBubble({ role, content, contexts }: MessageBubbleProps) {
         isUser ? "ml-auto bubble-user" : "bubble-ai"
       )}
     >
-      <div className="flex items-center gap-2 text-label-sm" style={{ color: isUser ? "#b0b2ff" : "#c5c7c9" }}>
+      <div
+        className="flex items-center gap-2 text-label-sm"
+        style={{ color: isUser ? "var(--fyi-accent)" : "var(--fyi-muted)" }}
+      >
         <span className="material-symbols-outlined text-sm">{isUser ? "person" : "auto_awesome"}</span>
-        {isUser ? "You" : "Le Mem"}
+        {isUser ? "You" : "FYI"}
       </div>
 
-      <p className="mt-3 text-body-md leading-7" style={{ color: "#e5e2e1" }}>
-        {content}
-      </p>
+      <div className="mt-3 fyi-markdown" style={{ color: "#e5e2e1" }}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+          {content}
+        </ReactMarkdown>
+      </div>
 
       {contexts && contexts.length > 0 ? (
         <div className="mt-4 flex flex-wrap gap-2">

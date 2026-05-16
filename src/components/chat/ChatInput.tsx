@@ -39,17 +39,8 @@ export function ChatInput({ onSend, isLoading = false }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="glass-panel border border-white/10 p-3 md:p-4">
+    <form onSubmit={handleSubmit} className="fyi-input-panel">
       <div className="flex items-end gap-3">
-        <button
-          type="button"
-          disabled={isLoading}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-on-surface-variant transition-colors hover:bg-white/10 hover:text-on-surface disabled:opacity-50"
-          aria-label="Attach file"
-        >
-          <span className="material-symbols-outlined text-xl">attach_file</span>
-        </button>
-
         <div className="flex-1 rounded-3xl border border-white/10 bg-black/20 px-4 py-3">
           <textarea
             ref={textareaRef}
@@ -58,19 +49,13 @@ export function ChatInput({ onSend, isLoading = false }: ChatInputProps) {
             onKeyDown={handleKeyDown}
             rows={1}
             disabled={isLoading}
-            placeholder="Describe a memory, paste a note, or ask a question..."
+            placeholder="Describe a memory, paste a note, or ask FYI..."
             className="max-h-44 w-full resize-none bg-transparent text-body-md leading-7 outline-none placeholder:text-on-surface-variant disabled:opacity-50"
           />
 
           <div className="mt-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-label-sm text-on-surface-variant">
-              <span
-                className="inline-flex h-2 w-2 rounded-full"
-                style={{
-                  backgroundColor: isLoading ? "#b0b2ff" : "#c6e8c9",
-                }}
-              />
-              {isLoading ? "Processing..." : "Extracting entities automatically"}
+              {isLoading ? "Processing..." : "Ready"}
             </div>
 
             <button
@@ -85,15 +70,6 @@ export function ChatInput({ onSend, isLoading = false }: ChatInputProps) {
             </button>
           </div>
         </div>
-
-        <button
-          type="button"
-          disabled={isLoading}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-on-surface-variant transition-colors hover:bg-white/10 hover:text-on-surface disabled:opacity-50"
-          aria-label="Voice input"
-        >
-          <span className="material-symbols-outlined text-xl">mic</span>
-        </button>
       </div>
     </form>
   );

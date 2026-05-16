@@ -14,7 +14,7 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 console.log("\n" + "=".repeat(60));
-console.log("  LE MEM — CONTEXT REGISTRY VALIDATION");
+console.log("  FYI — CONTEXT REGISTRY VALIDATION");
 console.log("=".repeat(60) + "\n");
 
 // Read the registry file

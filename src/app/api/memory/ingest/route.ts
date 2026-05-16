@@ -21,12 +21,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      // Create a lightweight user record when one doesn't exist yet.
+      user = await prisma.user.create({
+        data: {
+          email: session.user.email,
+          name: session.user?.name ?? undefined,
+        },
+      });
     }
 
     if (!content) {

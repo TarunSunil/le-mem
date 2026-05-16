@@ -1,4 +1,4 @@
-# Le Mem — Personal Context OS · GitHub Copilot Vibe Coding Brief
+# FYI — Personal Context OS · GitHub Copilot Vibe Coding Brief
 
 Paste this entire document into your VS Code GitHub Copilot Chat to scaffold the project.
 
@@ -6,7 +6,7 @@ Paste this entire document into your VS Code GitHub Copilot Chat to scaffold the
 
 ## What we're building
 
-Le Mem is an AI-powered personal memory OS. The user talks to it like a WhatsApp self-chat. The AI automatically extracts entities (people, places, projects, events), builds a knowledge graph in the background, and lets the user retrieve anything through natural language — not keywords.
+FYI is an AI-powered personal memory OS. The user talks to it like a WhatsApp self-chat. The AI automatically extracts entities (people, places, projects, events), builds a knowledge graph in the background, and lets the user retrieve anything through natural language — not keywords.
 
 Core screens already designed in Tailwind HTML:
 - **Omni-Chat** — primary input, dump anything (text, voice, images, PDFs)
@@ -122,7 +122,7 @@ le-mem/
 │   └── schema.prisma             ← full schema (see below)
 ├── types/
 │   └── index.ts                  ← shared TypeScript types
-├── tailwind.config.ts            ← with Le Mem design tokens
+├── tailwind.config.ts            ← with FYI design tokens
 └── .env.local
 ```
 
@@ -241,7 +241,7 @@ enum EntityType {
 
 ---
 
-## Tailwind config with Le Mem design tokens
+## Tailwind config with FYI design tokens
 
 ```ts
 // tailwind.config.ts
@@ -253,7 +253,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // --- Le Mem design tokens (from original HTML designs) ---
+        // --- FYI design tokens (from original HTML designs) ---
         "surface":                  "#131313",
         "surface-container":        "#201f1f",
         "surface-container-low":    "#1c1b1b",
@@ -538,7 +538,7 @@ npx prisma init
 
 ```
 1. "Scaffold the Next.js App Router shell with Sidebar, BottomNav, and TopBar 
-   components matching the Le Mem dark design system. Use the Tailwind tokens 
+  components matching the FYI dark design system. Use the Tailwind tokens 
    from the config above. The sidebar should show on md+ screens, 
    bottom nav on mobile only."
 

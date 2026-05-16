@@ -1,6 +1,6 @@
-# Le Mem - Setup Guide
+# FYI - Setup Guide
 
-This guide will walk you through setting up the Le Mem personal memory operating system step by step.
+This guide will walk you through setting up the FYI personal memory operating system step by step.
 
 ## Prerequisites
 
@@ -45,7 +45,7 @@ Supabase provides a managed PostgreSQL database with authentication and real-tim
 
 1. Click "New Project"
 2. Fill in:
-   - **Project name**: `le-mem`
+   - **Project name**: `fyi`
    - **Database password**: Create a strong password (save this!)
    - **Region**: Choose closest to your location
 3. Wait for the project to initialize (2-3 minutes)
@@ -119,7 +119,7 @@ This allows users to sign in with their Google account.
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)
 2. Click **Create Project**
-3. Name it `le-mem` and click **Create**
+3. Name it `fyi` and click **Create**
 4. Wait for it to initialize
 
 ### 5.2 Enable OAuth Consent Screen
@@ -127,7 +127,7 @@ This allows users to sign in with their Google account.
 1. In the left sidebar, go to **APIs & Services** → **OAuth consent screen**
 2. Select **External** and click **Create**
 3. Fill in:
-   - **App name**: `Le Mem`
+   - **App name**: `FYI`
    - **User support email**: Your email
    - **Developer contact email**: Your email
 4. Click **Save and Continue**
@@ -191,7 +191,7 @@ Uploadthing handles file uploads to cloud storage.
 ### 7.2 Create App
 
 1. Click **Create New App**
-2. Name it `le-mem`
+2. Name it `fyi`
 3. Click **Create**
 
 ### 7.3 Get API Keys

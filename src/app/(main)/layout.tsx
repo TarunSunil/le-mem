@@ -19,7 +19,7 @@ export default async function MainLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[#131313]">
+    <div className="flex h-screen" style={{ backgroundColor: "var(--fyi-bg)" }}>
       {/* Desktop Sidebar */}
       <Sidebar />
 
@@ -36,8 +36,14 @@ export default async function MainLayout({
 
       {/* Ambient Orbs Background */}
       <div className="fixed -z-10 inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 blur-3xl opacity-20" style={{background: "linear-gradient(to right, #3131c0, transparent)"}} />
-        <div className="absolute bottom-1/4 right-1/3 w-96 h-96 blur-3xl opacity-15" style={{background: "linear-gradient(to left, #ddb7ff, transparent)"}} />
+        <div
+          className="absolute top-0 left-1/4 h-96 w-96 blur-3xl opacity-20"
+          style={{ background: "linear-gradient(to right, rgba(224, 122, 95, 0.7), transparent)" }}
+        />
+        <div
+          className="absolute bottom-1/4 right-1/3 h-96 w-96 blur-3xl opacity-15"
+          style={{ background: "linear-gradient(to left, rgba(42, 157, 143, 0.7), transparent)" }}
+        />
       </div>
     </div>
   );

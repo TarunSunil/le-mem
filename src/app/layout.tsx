@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
-import { Inter, Newsreader } from "next/font/google";
+import { Fraunces, Sora } from "next/font/google";
 import "./globals.css";
 import { RootSessionProvider } from "@/components/providers/SessionProvider";
 
-const inter = Inter({
-  variable: "--font-inter",
+const sora = Sora({
+  variable: "--font-sora",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
 });
 
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
-  title: "Le Mem - Personal Memory OS",
-  description: "AI-powered personal memory operating system",
+  title: "FYI - Personal Memory OS",
+  description: "FYI is a private memory companion that keeps your context organized.",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${newsreader.variable} dark h-full`}
+      className={`${sora.variable} ${fraunces.variable} dark h-full`}
     >
       <head>
         <link
@@ -41,7 +41,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-[#131313] text-[#e5e2e1] font-sans">
+      <body className="min-h-screen font-sans">
         <RootSessionProvider>{children}</RootSessionProvider>
       </body>
     </html>

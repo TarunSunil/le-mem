@@ -20,13 +20,13 @@ export function Sidebar() {
   return (
     <aside
       className="hidden md:flex flex-col w-64 h-screen border-r fixed left-0 top-0 pt-8 px-4"
-      style={{ backgroundColor: "#131313", borderColor: "#44474a" }}
+      style={{ backgroundColor: "var(--fyi-bg)", borderColor: "var(--fyi-border)" }}
     >
       <div className="mb-12">
-        <h1 className="text-2xl font-newsreader font-bold" style={{color: "#e5e2e1"}}>
-          Le Mem
+        <h1 className="text-2xl font-newsreader font-bold" style={{color: "var(--fyi-text)"}}>
+          FYI
         </h1>
-        <p className="text-label-sm mt-1" style={{color: "#c5c7c9"}}>
+        <p className="text-label-sm mt-1" style={{color: "var(--fyi-muted)"}}>
           Personal Memory OS
         </p>
       </div>
@@ -43,8 +43,8 @@ export function Sidebar() {
                 isActive && "font-medium"
               )}
               style={{
-                color: isActive ? "#b0b2ff" : "#c5c7c9",
-                backgroundColor: isActive ? "#3131c0" : "transparent",
+                color: isActive ? "var(--fyi-accent-soft)" : "var(--fyi-muted)",
+                backgroundColor: isActive ? "var(--fyi-accent-strong)" : "transparent",
               }}
             >
               <span className="material-symbols-outlined text-xl">
@@ -56,14 +56,14 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="pt-4 border-t" style={{borderColor: "#44474a"}}>
+      <div className="pt-4 border-t" style={{borderColor: "var(--fyi-border)"}}>
         <button
           type="button"
-          className="w-full px-4 py-3 rounded-lg text-[#e5e2e1] transition-colors flex items-center gap-2"
-          style={{backgroundColor: "#201f1f"}}
+          className="w-full px-4 py-3 rounded-lg transition-colors flex items-center gap-2"
+          style={{backgroundColor: "var(--fyi-surface-2)", color: "var(--fyi-text)"}}
           onClick={() => signOut({ callbackUrl: "/login" })}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2a2a")}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#201f1f")}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--fyi-surface-3)")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "var(--fyi-surface-2)")}
         >
           <span className="material-symbols-outlined text-xl">logout</span>
           Sign Out

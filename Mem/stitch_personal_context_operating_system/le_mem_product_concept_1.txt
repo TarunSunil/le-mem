@@ -1,7 +1,7 @@
-# Le Mem — The Personal Context Operating System
+# FYI — The Personal Context Operating System
 
 ## Core Idea
-Le Mem (Remember) is an AI-powered personal context system that acts as a contextual memory engine, a self-organizing life database, and an evolving AI knowledge graph. It removes the burden of manual organization by allowing users to talk naturally to the app and have the system identify entities, build relationships, and update context automatically.
+FYI (Remember) is an AI-powered personal context system that acts as a contextual memory engine, a self-organizing life database, and an evolving AI knowledge graph. It removes the burden of manual organization by allowing users to talk naturally to the app and have the system identify entities, build relationships, and update context automatically.
 
 ## Product Vision
 “Talk naturally. Stay organized automatically.”

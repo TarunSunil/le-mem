@@ -2,12 +2,7 @@
 
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { TARUN_SEARCH_RESULTS, TARUN_SUGGESTIONS } from "@/lib/context-registry";
-
-const SUGGESTED_QUERIES = TARUN_SUGGESTIONS;
-
-const SAMPLE_RESULTS = TARUN_SEARCH_RESULTS;
+import { useState, useEffect } from "react";
 
 interface SearchResult {
   id?: string;
@@ -26,10 +21,10 @@ interface SearchResults {
 function ResultCard({ title, summary }: { title: string; summary: string }) {
   return (
     <article className="rounded-3xl border border-white/10 bg-white/5 p-5 transition-colors hover:border-secondary-container/30 hover:bg-white/8">
-      <h3 className="text-body-lg font-medium" style={{ color: "#e5e2e1" }}>
+      <h3 className="text-body-lg font-medium" style={{ color: "var(--fyi-text)" }}>
         {title}
       </h3>
-      <p className="mt-3 text-body-md leading-7" style={{ color: "#c5c7c9" }}>
+      <p className="mt-3 text-body-md leading-7" style={{ color: "var(--fyi-muted)" }}>
         {summary}
       </p>
     </article>
@@ -37,8 +32,12 @@ function ResultCard({ title, summary }: { title: string; summary: string }) {
 }
 
 export default function SearchPage() {
-  const [query, setQuery] = useState("What do I know about Tarun?");
-  const [results, setResults] = useState<SearchResults>(SAMPLE_RESULTS);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResults>({
+    people: [],
+    snippets: [],
+    projects: [],
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +47,8 @@ export default function SearchPage() {
       if (query.trim()) {
         searchMemories(query);
       } else {
-        setResults(SAMPLE_RESULTS);
+        setResults({ people: [], snippets: [], projects: [] });
+        setError(null);
       }
     }, 300);
 
@@ -62,12 +62,28 @@ export default function SearchPage() {
 
       const response = await fetch("/api/memory/search", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: searchQuery, limit: 10 }),
       });
 
       if (!response.ok) {
-        throw new Error("Search failed");
+        let errorMessage = `Search failed (${response.status})`;
+        try {
+          const contentType = response.headers.get("content-type") ?? "";
+          if (contentType.includes("application/json")) {
+            const body = await response.json();
+            if (body?.error) errorMessage = body.error;
+            else if (body?.details) errorMessage = `${errorMessage}: ${body.details}`;
+          } else {
+            const text = await response.text();
+            if (text.trim()) errorMessage = `${errorMessage}: ${text}`;
+          }
+        } catch (e) {
+          // ignore parsing errors
+        }
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -106,12 +122,18 @@ export default function SearchPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
       console.error("Search error:", err);
-      // Fall back to sample results on error
-      setResults(SAMPLE_RESULTS);
+      setResults({ people: [], snippets: [], projects: [] });
     } finally {
       setIsLoading(false);
     }
   };
+
+  const isEmpty =
+    !isLoading &&
+    !error &&
+    results.people.length === 0 &&
+    results.snippets.length === 0 &&
+    results.projects.length === 0;
 
   return (
     <div className="flex h-full flex-col px-container-padding py-6">
@@ -129,15 +151,15 @@ export default function SearchPage() {
           <div className="mt-5 max-w-2xl">
             <h1
               className="font-newsreader text-3xl leading-tight md:text-5xl"
-              style={{ color: "#e5e2e1" }}
+              style={{ color: "var(--fyi-text)" }}
             >
               Search by meaning, not just by keywords.
             </h1>
             <p
               className="mt-4 text-body-md md:text-body-lg"
-              style={{ color: "#c5c7c9" }}
+              style={{ color: "var(--fyi-muted)" }}
             >
-              Ask for the memory, person, project, or category you remember and Le Mem
+              Ask for the memory, person, project, or category you remember and FYI
               will surface the related notes, snippets, and context pages.
             </p>
           </div>
@@ -175,19 +197,16 @@ export default function SearchPage() {
           )}
         </section>
 
-        <section className="mt-4 flex flex-wrap gap-2">
-          {SUGGESTED_QUERIES.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              onClick={() => setQuery(suggestion)}
-              disabled={isLoading}
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-label-sm text-on-surface-variant transition-colors hover:border-secondary-container/40 hover:bg-secondary-container/10 hover:text-on-surface disabled:opacity-50"
-            >
-              {suggestion}
-            </button>
-          ))}
-        </section>
+        {isEmpty && !query.trim() && (
+          <section className="mt-6 rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center">
+            <h2 className="text-headline-md font-newsreader" style={{ color: "var(--fyi-text)" }}>
+              Search your memory timeline
+            </h2>
+            <p className="mt-3 text-body-md" style={{ color: "var(--fyi-muted)" }}>
+              Start by entering a topic, person, or project. FYI will surface related memories as you add them.
+            </p>
+          </section>
+        )}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <section className="space-y-4 lg:col-span-1">

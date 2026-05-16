@@ -46,7 +46,7 @@ function TimelineItem({
         <div>
           <p
             className="text-label-sm uppercase tracking-[0.2em]"
-            style={{ color: "#b0b2ff" }}
+            style={{ color: "var(--fyi-accent)" }}
           >
             {type}
           </p>
@@ -56,7 +56,7 @@ function TimelineItem({
         </div>
       </div>
 
-      <p className="mt-4 text-body-md leading-7" style={{ color: "#c5c7c9" }}>
+      <p className="mt-4 text-body-md leading-7" style={{ color: "var(--fyi-muted)" }}>
         {summary}
       </p>
     </article>
@@ -152,13 +152,13 @@ export default function TimelinePage() {
           <div className="mt-5 max-w-2xl">
             <h1
               className="font-newsreader text-3xl leading-tight md:text-5xl"
-              style={{ color: "#e5e2e1" }}
+              style={{ color: "var(--fyi-text)" }}
             >
               Every memory, ordered by time and context.
             </h1>
             <p
               className="mt-4 text-body-md md:text-body-lg"
-              style={{ color: "#c5c7c9" }}
+              style={{ color: "var(--fyi-muted)" }}
             >
               The timeline turns scattered notes into a story. You can scan what
               happened today, revisit what mattered yesterday, and trace how a
@@ -170,14 +170,14 @@ export default function TimelinePage() {
         <div className="mt-6 grid gap-3 md:grid-cols-3">
           {[
             [memories.length.toString(), "memories total"],
-            ["--", "people connected"],
-            ["--", "context pages updated"],
+            ["0", "people connected"],
+            ["0", "context pages updated"],
           ].map(([value, label]) => (
             <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="text-2xl font-semibold" style={{ color: "#e5e2e1" }}>
                 {value}
               </div>
-              <div className="mt-1 text-label-sm" style={{ color: "#c5c7c9" }}>
+              <div className="mt-1 text-label-sm" style={{ color: "var(--fyi-muted)" }}>
                 {label}
               </div>
             </div>
@@ -185,7 +185,7 @@ export default function TimelinePage() {
         </div>
 
         {isLoading && (
-          <div className="mt-8 text-center" style={{ color: "#c5c7c9" }}>
+          <div className="mt-8 text-center" style={{ color: "var(--fyi-muted)" }}>
             Loading memories...
           </div>
         )}
@@ -200,7 +200,7 @@ export default function TimelinePage() {
         )}
 
         {!isLoading && !error && Object.keys(groupedMemories).length === 0 && (
-          <div className="mt-8 text-center" style={{ color: "#c5c7c9" }}>
+          <div className="mt-8 text-center" style={{ color: "var(--fyi-muted)" }}>
             No memories yet. Start by adding a memory in the chat!
           </div>
         )}
@@ -217,7 +217,7 @@ export default function TimelinePage() {
                     <div className="h-px flex-1 bg-white/10" />
                     <h2
                       className="text-label-sm uppercase tracking-[0.24em]"
-                      style={{ color: "#b0b2ff" }}
+                      style={{ color: "var(--fyi-accent)" }}
                     >
                       {dateKey}
                     </h2>

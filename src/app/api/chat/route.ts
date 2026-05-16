@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     // System prompt for context-aware responses
-    const systemPrompt = `You are Le Mem, an AI assistant for a personal memory operating system. 
+    const systemPrompt = `You are FYI, an AI assistant for a personal memory operating system. 
 Your role is to help users organize, retrieve, and understand their memories and connections.
 Be conversational, helpful, and focus on extracting entities (people, places, projects, topics) when relevant.
 When the user shares information, ask clarifying questions to better understand context.

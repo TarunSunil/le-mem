@@ -5,40 +5,40 @@ export default {
   theme: {
     colors: {
       // Base colors
-      "background": "#131313",
-      "on-background": "#e5e2e1",
-      "surface": "#131313",
-      "surface-container": "#201f1f",
-      "surface-container-high": "#2a2a2a",
-      "surface-variant": "#353534",
-      "on-surface": "#e5e2e1",
-      "on-surface-variant": "#c5c7c9",
+      "background": "var(--fyi-bg)",
+      "on-background": "var(--fyi-text)",
+      "surface": "var(--fyi-surface)",
+      "surface-container": "var(--fyi-surface-2)",
+      "surface-container-high": "var(--fyi-surface-3)",
+      "surface-variant": "var(--fyi-surface-4)",
+      "on-surface": "var(--fyi-text)",
+      "on-surface-variant": "var(--fyi-muted)",
       
       // Primary
-      "primary": "#ffffff",
-      "on-primary": "#2f3132",
-      "primary-container": "#e2e2e4",
+      "primary": "var(--fyi-text)",
+      "on-primary": "var(--fyi-bg)",
+      "primary-container": "var(--fyi-highlight)",
       
       // Secondary
-      "secondary": "#c0c1ff",
-      "secondary-container": "#3131c0",
-      "on-secondary": "#1000a9",
-      "on-secondary-container": "#b0b2ff",
+      "secondary": "var(--fyi-accent)",
+      "secondary-container": "var(--fyi-accent-strong)",
+      "on-secondary": "var(--fyi-accent-contrast)",
+      "on-secondary-container": "var(--fyi-accent-soft)",
       
       // Tertiary
-      "tertiary": "#ffffff",
-      "tertiary-container": "#f0dbff",
-      "tertiary-fixed-dim": "#ddb7ff",
-      "on-tertiary": "#490080",
-      "on-tertiary-container": "#8a33d9",
+      "tertiary": "var(--fyi-accent-2)",
+      "tertiary-container": "var(--fyi-accent-2-strong)",
+      "tertiary-fixed-dim": "var(--fyi-accent-2-soft)",
+      "on-tertiary": "var(--fyi-accent-2-contrast)",
+      "on-tertiary-container": "var(--fyi-accent-2-soft)",
       
       // Utility
-      "outline": "#8f9194",
-      "outline-variant": "#44474a",
+      "outline": "var(--fyi-outline)",
+      "outline-variant": "var(--fyi-border)",
       "error": "#ffb4ab",
       "on-error": "#690005",
-      "inverse-surface": "#e5e2e1",
-      "inverse-on-surface": "#313030",
+      "inverse-surface": "var(--fyi-text)",
+      "inverse-on-surface": "var(--fyi-bg)",
     },
     extend: {
       borderRadius: {
@@ -55,8 +55,8 @@ export default {
         "element-gap": "16px",
       },
       fontFamily: {
-        serif: ["Newsreader", "serif"],
-        sans: ["Inter", "sans-serif"],
+        serif: ["Fraunces", "serif"],
+        sans: ["Sora", "sans-serif"],
       },
       fontSize: {
         "headline-md": ["24px", { lineHeight: "32px", fontWeight: "500" }],

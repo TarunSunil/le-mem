@@ -6,14 +6,14 @@ import { prisma } from "@/lib/db/prisma";
 import { GraphData, EntityType } from "@/types";
 
 const NODE_COLORS: Record<EntityType, string> = {
-  PERSON: "#ddb7ff", // tertiary-fixed-dim (purple)
-  PROJECT: "#b0b2ff", // on-secondary-container (indigo)
-  ORGANIZATION: "#c0c1ff", // secondary
-  PLACE: "#c5c7c9", // on-surface-variant
-  TRAVEL: "#c6c6c8", // surface-tint
-  HEALTH: "#ddb7ff",
-  TOPIC: "#8f9194", // outline
-  EVENT: "#b0b2ff",
+  PERSON: "#e07a5f",
+  PROJECT: "#2a9d8f",
+  ORGANIZATION: "#f2cc8f",
+  PLACE: "#b7b0a6",
+  TRAVEL: "#f2cc8f",
+  HEALTH: "#e07a5f",
+  TOPIC: "#6f665a",
+  EVENT: "#f2cc8f",
 };
 
 const NODE_SIZE: Record<EntityType, number> = {
