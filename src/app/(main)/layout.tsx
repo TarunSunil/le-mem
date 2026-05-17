@@ -26,7 +26,7 @@ export default async function MainLayout({
       <TopBar />
 
       {/* Main Content */}
-      <main className="min-h-0 flex-1 md:ml-64 pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 overflow-visible md:overflow-y-auto md:overscroll-contain" style={{ WebkitOverflowScrolling: "touch" }}>
+      <main className="min-h-0 flex-1 md:ml-64 pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 overflow-visible">
         <div className="min-h-full w-full">{children}</div>
       </main>
 
