@@ -1,10 +1,14 @@
 import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "../../../lib/db/prisma";
+import { isQuestionLike } from "@/lib/memoryHelpers";
 import { type Session } from "next-auth";
 
 interface Memory {
   id: string;
   content: string;
+  rawInput?: string;
+  summary?: string | null;
+  tags?: string[] | null;
   createdAt: Date;
   type?: string;
   title?: string;
@@ -112,7 +116,15 @@ export async function TimelineContent() {
     take: 100,
   });
 
-  const groupedMemories = groupMemoriesByDate(memories);
+  // Filter out question-like inputs (they shouldn't appear in the timeline)
+  const filtered = memories.filter((m) => !isQuestionLike(m.rawInput || m.content));
+
+  const enriched = filtered.map((m) => ({
+    ...m,
+    title: m.summary || (m.tags && m.tags[0]) || m.content.substring(0, 50),
+  }));
+
+  const groupedMemories = groupMemoriesByDate(enriched as Memory[]);
   const dateOrder = ["Today", "Yesterday", "This Week", "Earlier"];
 
   return (

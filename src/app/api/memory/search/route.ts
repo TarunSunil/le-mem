@@ -2,6 +2,7 @@
 import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
 import { embedText } from "@/lib/ai/embed";
+import { rankMemoriesForQuery, tokenizeSearchText } from "@/lib/memoryHelpers";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -54,12 +55,8 @@ export async function POST(request: NextRequest) {
     const memories = await prisma.memory.findMany({
       where: {
         userId: user.id,
-        content: {
-          contains: query,
-          mode: "insensitive",
-        },
       },
-      take: limit,
+      take: 250,
       include: {
         entities: {
           include: {
@@ -68,6 +65,8 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    const rankedMemories = rankMemoriesForQuery(query, memories, queryEmbedding, limit);
 
     // Search entities
     const entities = await prisma.entity.findMany({
@@ -81,14 +80,20 @@ export async function POST(request: NextRequest) {
       take: limit,
     });
 
+    const queryTokens = tokenizeSearchText(query);
+    const rankedEntities = entities.filter((entity) => {
+      const entityText = `${entity.name} ${entity.summary || ""}`.toLowerCase();
+      return queryTokens.some((token) => entityText.includes(token));
+    });
+
     const results = [
-      ...memories.map((memory) => ({
+      ...rankedMemories.map((memory) => ({
         id: memory.id,
         type: "MEMORY",
         title: memory.summary || memory.content.slice(0, 64),
         summary: memory.summary || memory.content,
       })),
-      ...entities.map((entity) => ({
+      ...rankedEntities.map((entity) => ({
         id: entity.id,
         type: entity.type,
         name: entity.name,
@@ -98,14 +103,14 @@ export async function POST(request: NextRequest) {
     ];
 
     // Group results by type
-    const people = entities.filter((e: { type: string }) => e.type === "PERSON");
-    const projects = entities.filter((e: { type: string }) => e.type === "PROJECT");
-    const places = entities.filter((e: { type: string }) => e.type === "PLACE");
-    const topics = entities.filter((e: { type: string }) => e.type === "TOPIC");
+    const people = rankedEntities.filter((e: { type: string }) => e.type === "PERSON");
+    const projects = rankedEntities.filter((e: { type: string }) => e.type === "PROJECT");
+    const places = rankedEntities.filter((e: { type: string }) => e.type === "PLACE");
+    const topics = rankedEntities.filter((e: { type: string }) => e.type === "TOPIC");
 
     return NextResponse.json({
       results,
-      memories,
+      memories: rankedMemories,
       entities: {
         people,
         projects,

@@ -4,6 +4,7 @@ import { type Session } from "next-auth";
 import { unstable_cache } from "next/cache";
 import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "../../../lib/db/prisma";
+import { isQuestionLike, humanizeEntityType } from "@/lib/memoryHelpers";
 
 export const revalidate = 60;
 
@@ -34,15 +35,15 @@ const loadGroupsCached = unstable_cache(
         if (!byType[e.type]) byType[e.type] = [];
         byType[e.type].push({
           id: e.id,
-          label: e.type,
-          title: e.name,
+          label: humanizeEntityType(e.type),
+          title: e.summary ? e.summary : e.name,
           summary: e.summary || "",
           accent: "#e07a5f",
         });
       }
 
       for (const [type, items] of Object.entries(byType)) {
-        groups.push({ id: type, title: type, contexts: items });
+        groups.push({ id: type, title: humanizeEntityType(type), contexts: items });
       }
 
       return groups;
@@ -55,8 +56,11 @@ const loadGroupsCached = unstable_cache(
     });
     if (memories.length === 0) return [];
 
+    // Filter out question-like rows (we don't surface questions as contexts)
+    const realMemories = memories.filter((m) => !isQuestionLike((m as any).rawInput || m.content));
+
     const tagGroups: Record<string, ContextCard[]> = {};
-    for (const m of memories) {
+    for (const m of realMemories) {
       const tag = (m.tags && m.tags[0]) || "Memories";
       if (!tagGroups[tag]) tagGroups[tag] = [];
       tagGroups[tag].push({

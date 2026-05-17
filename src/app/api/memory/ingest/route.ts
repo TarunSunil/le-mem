@@ -3,6 +3,7 @@ import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
 import { embedText } from "@/lib/ai/embed";
 import { extractEntities } from "@/lib/ai/extract-entities";
+import { isQuestionLike, makeMemoryTitle } from "@/lib/memoryHelpers";
 import { ContentType, EntityType } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -41,9 +42,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Generate embedding
+    // If the input looks like a question, skip persisting it as a memory.
+    if (isQuestionLike(content)) {
+      return NextResponse.json({ skipped: true, reason: "question-like" });
+    }
+
+    // 1. Generate embedding (best-effort)
     const embedding = await embedText(content);
-    void embedding;
 
     // 2. Extract entities
     const extractedData = await extractEntities(content);
@@ -63,18 +68,27 @@ export async function POST(request: NextRequest) {
       extractedData.topics.push({ name: fallbackName });
     }
 
-    // 3. Create memory record
+    // 3. Create memory record with a concise `summary` used for titles/previews
     const memory = await prisma.memory.create({
       data: {
         userId: user.id,
         content,
         rawInput: content,
+        summary: makeMemoryTitle(content, 12),
         contentType: contentType as ContentType,
         fileUrl,
         sourceUrl,
         tags: extractedData.topics.map((t) => t.name),
       },
     });
+
+    if (embedding.length > 0) {
+      await prisma.$executeRaw`
+        UPDATE "Memory"
+        SET "embedding" = ${JSON.stringify(embedding)}::vector
+        WHERE "id" = ${memory.id}
+      `;
+    }
 
     // 4. Process entities and create relationships
     const entityMap: Record<string, string> = {}; // name -> id mapping

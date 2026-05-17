@@ -1,5 +1,8 @@
 import { authOptions } from "@/auth";
 import { getCachedSession } from "@/lib/auth/get-session";
+import { prisma } from "@/lib/db/prisma";
+import { embedText } from "@/lib/ai/embed";
+import { rankMemoriesForQuery } from "@/lib/memoryHelpers";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -45,11 +48,53 @@ export async function POST(req: NextRequest) {
     }
 
     // System prompt for context-aware responses
-    const systemPrompt = `You are FYI, an AI assistant for a personal memory operating system. 
+    let systemPrompt = `You are FYI, an AI assistant for a personal memory operating system. 
 Your role is to help users organize, retrieve, and understand their memories and connections.
 Be conversational, helpful, and focus on extracting entities (people, places, projects, topics) when relevant.
 When the user shares information, ask clarifying questions to better understand context.
 Format responses clearly with markdown when helpful.`;
+
+    // Prepend relevant stored memories for the latest user message to give the model context
+    const latestUserMsg = messages.slice().reverse().find((m) => m.role !== "assistant")?.content;
+    if (latestUserMsg) {
+      try {
+        const sessionUser = await getCachedSession();
+        const email = sessionUser?.user?.email;
+        if (email) {
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user) {
+            throw new Error("User not found for chat memory lookup");
+          }
+
+          const queryEmbedding = await embedText(latestUserMsg);
+          const memories = await prisma.memory.findMany({
+            where: {
+              userId: user.id,
+            },
+            orderBy: { createdAt: "desc" },
+            take: 250,
+            include: {
+              entities: {
+                include: {
+                  entity: true,
+                },
+              },
+            },
+          });
+
+          const matches = rankMemoriesForQuery(latestUserMsg, memories, queryEmbedding, 5);
+
+          if (matches && matches.length > 0) {
+            const memContext = matches
+              .map((m) => `- ${m.summary || m.content.slice(0, 200)}`)
+              .join("\n");
+            systemPrompt = `${systemPrompt}\n\nRelevant memories:\n${memContext}`;
+          }
+        }
+      } catch (e) {
+        console.warn("Memory lookup failed for chat context:", e);
+      }
+    }
 
     // Convert messages to Gemini format
     const contents = messages.map((msg) => ({
