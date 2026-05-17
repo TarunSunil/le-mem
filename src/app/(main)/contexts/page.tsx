@@ -1,8 +1,11 @@
 // Server-rendered contexts page: fetches groups for the signed-in user using Prisma.
 import Link from "next/link";
-import { getServerSession, type Session } from "next-auth";
-import { authOptions } from "@/auth";
+import { type Session } from "next-auth";
+import { unstable_cache } from "next/cache";
+import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "../../../lib/db/prisma";
+
+export const revalidate = 60;
 
 type ContextCard = {
   id: string;
@@ -20,58 +23,69 @@ type ContextGroup = {
   contexts: ContextCard[];
 };
 
+const loadGroupsCached = unstable_cache(
+  async (userId: string): Promise<ContextGroup[]> => {
+    const entities = await prisma.entity.findMany({ where: { userId } });
+    const groups: ContextGroup[] = [];
+
+    if (entities.length > 0) {
+      const byType: Record<string, ContextCard[]> = {};
+      for (const e of entities) {
+        if (!byType[e.type]) byType[e.type] = [];
+        byType[e.type].push({
+          id: e.id,
+          label: e.type,
+          title: e.name,
+          summary: e.summary || "",
+          accent: "#e07a5f",
+        });
+      }
+
+      for (const [type, items] of Object.entries(byType)) {
+        groups.push({ id: type, title: type, contexts: items });
+      }
+
+      return groups;
+    }
+
+    const memories = await prisma.memory.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    if (memories.length === 0) return [];
+
+    const tagGroups: Record<string, ContextCard[]> = {};
+    for (const m of memories) {
+      const tag = (m.tags && m.tags[0]) || "Memories";
+      if (!tagGroups[tag]) tagGroups[tag] = [];
+      tagGroups[tag].push({
+        id: `mem-${m.id}`,
+        label: tag,
+        title: m.summary ? m.summary.slice(0, 60) : m.content.slice(0, 60),
+        summary: m.summary || m.content.slice(0, 200),
+        accent: "#2a9d8f",
+      });
+    }
+
+    for (const [tag, items] of Object.entries(tagGroups)) {
+      groups.push({ id: `tag-${tag}`, title: tag, contexts: items });
+    }
+
+    return groups;
+  },
+  ["context-groups"],
+  { revalidate: 30 }
+);
+
 async function loadGroups(): Promise<ContextGroup[]> {
-  const session = (await getServerSession(authOptions as any)) as Session | null;
-  if (!session || !session.user?.email) return [];
+  const session = (await getCachedSession()) as Session | null;
+  if (!session?.user?.email) return [];
 
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) return [];
 
-  const entities = await prisma.entity.findMany({ where: { userId: user.id } });
-  const groups: ContextGroup[] = [];
-
-  if (entities.length > 0) {
-    const byType: Record<string, ContextCard[]> = {};
-    for (const e of entities) {
-      if (!byType[e.type]) byType[e.type] = [];
-      byType[e.type].push({
-        id: e.id,
-        label: e.type,
-        title: e.name,
-        summary: e.summary || "",
-        accent: "#e07a5f",
-      });
-    }
-
-    for (const [type, items] of Object.entries(byType)) {
-      groups.push({ id: type, title: type, contexts: items });
-    }
-
-    return groups;
-  }
-
-  // Fallback to memories
-  const memories = await prisma.memory.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 50 });
-  if (memories.length === 0) return [];
-
-  const tagGroups: Record<string, ContextCard[]> = {};
-  for (const m of memories) {
-    const tag = (m.tags && m.tags[0]) || "Memories";
-    if (!tagGroups[tag]) tagGroups[tag] = [];
-    tagGroups[tag].push({
-      id: `mem-${m.id}`,
-      label: tag,
-      title: m.summary ? (m.summary.slice(0, 60)) : (m.content.slice(0, 60)),
-      summary: m.summary || m.content.slice(0, 200),
-      accent: "#2a9d8f",
-    });
-  }
-
-  for (const [tag, items] of Object.entries(tagGroups)) {
-    groups.push({ id: `tag-${tag}`, title: tag, contexts: items });
-  }
-
-  return groups;
+  return loadGroupsCached(user.id);
 }
 
 export default async function ContextsPage() {
@@ -85,7 +99,7 @@ export default async function ContextsPage() {
   ];
 
   return (
-    <div className="flex h-full flex-col px-container-padding py-6">
+    <div className="flex min-h-full flex-col px-container-padding py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto w-full max-w-6xl">
         <section className="glass-panel border border-white/10 p-6 md:p-8">
           <div className="flex flex-wrap items-center gap-3">

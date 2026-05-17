@@ -1,7 +1,7 @@
 "use client";
 
 import { KnowledgeGraph } from "@/components/graph/KnowledgeGraph";
-import { useEffect, useState } from "react";
+import useSWR from "swr";
 import type { GraphData } from "@/types";
 
 const LEGEND = [
@@ -12,38 +12,24 @@ const LEGEND = [
 ];
 
 export default function GraphPage() {
-  const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const fetcher = async (url: string) => {
+    const response = await fetch(url, { credentials: "include" });
+    if (!response.ok) {
+      throw new Error("Failed to fetch graph data");
+    }
+    return (await response.json()) as GraphData;
+  };
 
-  useEffect(() => {
-    const fetchGraphData = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch("/api/graph");
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch graph data");
-        }
-
-        const data = await response.json();
-        setGraphData(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-        console.error("Fetch graph error:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchGraphData();
-  }, []);
+  const { data: graphData, error, isLoading } = useSWR("/api/graph", fetcher, {
+    dedupingInterval: 30000,
+    revalidateOnFocus: false,
+  });
 
   const nodeCount = graphData?.nodes.length || 0;
   const linkCount = graphData?.links.length || 0;
 
   return (
-    <div className="flex h-full flex-col px-container-padding py-6">
+    <div className="flex min-h-full flex-col px-container-padding py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <section className="glass-panel border border-white/10 p-6 md:p-8">
           <div className="flex flex-wrap items-center gap-3">

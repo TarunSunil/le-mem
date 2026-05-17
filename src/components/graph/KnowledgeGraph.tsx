@@ -6,6 +6,7 @@ import type { GraphData, EntityType } from "@/types";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
+  loading: () => <div className="flex h-full items-center justify-center" style={{ color: "#c5c7c9" }}>Loading graph...</div>,
 });
 
 const NODE_COLORS: Record<EntityType, string> = {
@@ -57,7 +58,7 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
   const isEmpty = !isLoading && graphData.nodes.length === 0;
 
   return (
-    <div ref={containerRef} className="relative h-full min-h-[560px] overflow-hidden rounded-3xl border border-white/10 bg-black/20">
+    <div ref={containerRef} className="relative h-full min-h-140 overflow-hidden rounded-3xl border border-white/10 bg-black/20">
       {dimensions.width > 0 ? (
         <ForceGraph2D
           width={dimensions.width}
@@ -102,7 +103,7 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
         </div>
       )}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#131313] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-linear-to-t from-[#131313] to-transparent" />
     </div>
   );
 }

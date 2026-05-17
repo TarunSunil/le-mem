@@ -136,7 +136,7 @@ export default function SearchPage() {
     results.projects.length === 0;
 
   return (
-    <div className="flex h-full flex-col px-container-padding py-6">
+    <div className="flex min-h-full flex-col px-container-padding py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto w-full max-w-6xl">
         <section className="glass-panel border border-white/10 p-6 md:p-8">
           <div className="flex flex-wrap items-center gap-3">

@@ -1,11 +1,11 @@
 import { authOptions } from "@/auth";
+import { getCachedSession } from "@/lib/auth/get-session";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
+    const session = await getCachedSession();
     if (!session?.user?.email) {
       if (!authOptions.providers.length) {
         return NextResponse.json(

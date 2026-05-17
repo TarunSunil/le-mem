@@ -1,10 +1,9 @@
 // src/app/api/memory/ingest/route.ts
-import { authOptions } from "@/auth";
+import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
 import { embedText } from "@/lib/ai/embed";
 import { extractEntities } from "@/lib/ai/extract-entities";
 import { ContentType, EntityType } from "@/types";
-import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -16,7 +15,7 @@ export async function POST(request: NextRequest) {
       sourceUrl,
     } = await request.json();
 
-    const session = await getServerSession(authOptions);
+    const session = await getCachedSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

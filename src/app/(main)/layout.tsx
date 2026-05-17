@@ -3,8 +3,7 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { TopBar } from "@/components/layout/TopBar";
-import { authOptions } from "@/auth";
-import { getServerSession } from "next-auth/next";
+import { getCachedSession } from "@/lib/auth/get-session";
 import { redirect } from "next/navigation";
 
 export default async function MainLayout({
@@ -12,14 +11,14 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getCachedSession();
 
   if (!session?.user) {
     redirect("/login");
   }
 
   return (
-    <div className="flex h-screen" style={{ backgroundColor: "var(--fyi-bg)" }}>
+    <div className="flex min-h-dvh" style={{ backgroundColor: "var(--fyi-bg)" }}>
       {/* Desktop Sidebar */}
       <Sidebar />
 
@@ -27,8 +26,8 @@ export default async function MainLayout({
       <TopBar />
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 pt-14 md:pt-0 pb-20 md:pb-0 overflow-y-auto">
-        <div className="w-full h-full">{children}</div>
+      <main className="min-h-0 flex-1 md:ml-64 pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 overflow-y-auto overscroll-contain">
+        <div className="min-h-full w-full">{children}</div>
       </main>
 
       {/* Mobile Bottom Nav */}
