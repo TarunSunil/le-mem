@@ -1,6 +1,6 @@
 // Server-rendered contexts page: fetches groups for the signed-in user using Prisma.
 import Link from "next/link";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/auth";
 import { prisma } from "../../../lib/db/prisma";
 
@@ -21,7 +21,7 @@ type ContextGroup = {
 };
 
 async function loadGroups(): Promise<ContextGroup[]> {
-  const session = await getServerSession(authOptions as any);
+  const session = (await getServerSession(authOptions as any)) as Session | null;
   if (!session || !session.user?.email) return [];
 
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
