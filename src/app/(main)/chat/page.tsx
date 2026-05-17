@@ -179,19 +179,10 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-[calc(100dvh-8.5rem)] flex-col">
       <div className="flex-1 overflow-y-auto px-container-padding pt-6 pb-36 md:pb-28">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
           <section className="glass-panel border border-white/10 p-6 md:p-8">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-full bg-secondary-container px-3 py-1 text-label-sm text-on-secondary-container">
-                FYI Memory Chat
-              </span>
-              <span className="rounded-full border border-white/10 px-3 py-1 text-label-sm text-on-surface-variant">
-                Private context stream
-              </span>
-            </div>
-
             <div className="mt-5 max-w-2xl">
               <h1
                 className="font-newsreader text-3xl leading-tight md:text-5xl"
@@ -228,7 +219,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="input-gradient sticky bottom-0 mt-auto border-t border-white/5 px-container-padding pb-4 pt-5 md:pb-6">
+      <div className="input-gradient mt-auto border-t border-white/5 px-container-padding pb-4 pt-5 md:pb-6">
         <div className="mx-auto w-full max-w-4xl">
           <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
         </div>

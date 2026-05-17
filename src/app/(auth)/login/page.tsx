@@ -24,9 +24,6 @@ export default function LoginPage() {
           Sign in with Google
         </button>
 
-        <p className="text-center text-label-sm mt-8" style={{color: "var(--fyi-muted)"}}>
-          If sign-in fails, check that your Google OAuth client and NextAuth secret env vars are set.
-        </p>
       </div>
     </div>
   );

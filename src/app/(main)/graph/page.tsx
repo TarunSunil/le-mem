@@ -32,15 +32,6 @@ export default function GraphPage() {
     <div className="flex min-h-full flex-col px-container-padding py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <section className="glass-panel border border-white/10 p-6 md:p-8">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-secondary-container px-3 py-1 text-label-sm text-on-secondary-container">
-              Knowledge Graph
-            </span>
-            <span className="rounded-full border border-white/10 px-3 py-1 text-label-sm text-on-surface-variant">
-              Entity relationships
-            </span>
-          </div>
-
           <div className="mt-5 max-w-2xl">
             <h1
               className="font-newsreader text-3xl leading-tight md:text-5xl"
