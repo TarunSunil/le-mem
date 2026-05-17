@@ -18,7 +18,7 @@ export default async function MainLayout({
   }
 
   return (
-    <div className="flex min-h-dvh" style={{ backgroundColor: "var(--fyi-bg)" }}>
+    <div className="flex min-h-dvh flex-col md:flex-row overflow-x-hidden" style={{ backgroundColor: "var(--fyi-bg)" }}>
       {/* Desktop Sidebar */}
       <Sidebar />
 
@@ -26,7 +26,7 @@ export default async function MainLayout({
       <TopBar />
 
       {/* Main Content */}
-      <main className="min-h-0 flex-1 md:ml-64 pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 overflow-y-auto overscroll-contain">
+      <main className="min-h-0 flex-1 md:ml-64 pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 overflow-visible md:overflow-y-auto md:overscroll-contain" style={{ WebkitOverflowScrolling: "touch" }}>
         <div className="min-h-full w-full">{children}</div>
       </main>
 

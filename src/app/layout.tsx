@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${sora.variable} ${fraunces.variable} dark h-full`}
+      className={`${sora.variable} ${fraunces.variable} dark min-h-dvh`}
     >
       <head>
         <link
@@ -41,7 +41,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen font-sans">
+      <body className="min-h-dvh font-sans">
         <RootSessionProvider>{children}</RootSessionProvider>
       </body>
     </html>
