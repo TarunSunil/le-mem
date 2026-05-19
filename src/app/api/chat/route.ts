@@ -48,11 +48,11 @@ export async function POST(req: NextRequest) {
     }
 
     // System prompt for context-aware responses
-    let systemPrompt = `You are FYI, an AI assistant for a personal memory operating system. 
-Your role is to help users organize, retrieve, and understand their memories and connections.
-Be conversational, helpful, and focus on extracting entities (people, places, projects, topics) when relevant.
-When the user shares information, ask clarifying questions to better understand context.
-Format responses clearly with markdown when helpful.`;
+    let systemPrompt = `You are FYI, an AI assistant for a personal memory operating system.
+  Your role is to help users organize, retrieve, and understand their memories and connections.
+  You must answer using ONLY the Relevant memories provided below. Do not invent or infer facts.
+  If the Relevant memories are empty or do not contain the answer, say you do not have that in memory yet and ask the user to add it.
+  Be conversational and format responses clearly with markdown when helpful.`;
 
     // Prepend relevant stored memories for the latest user message to give the model context
     const latestUserMsg = messages.slice().reverse().find((m) => m.role !== "assistant")?.content;
@@ -109,6 +109,19 @@ Format responses clearly with markdown when helpful.`;
           }
 
           const matches = rankMemoriesForQuery(latestUserMsg, memories, queryEmbedding, 5);
+
+          if (!matches || matches.length === 0) {
+            const noMemoryText =
+              "I don't have that in memory yet. If you'd like, add the detail and I can remember it.";
+            return new NextResponse(
+              new ReadableStream({
+                start(controller) {
+                  controller.enqueue(new TextEncoder().encode(noMemoryText));
+                  controller.close();
+                },
+              })
+            );
+          }
 
           if (matches && matches.length > 0) {
             const memContext = matches

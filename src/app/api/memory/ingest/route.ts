@@ -3,8 +3,9 @@ import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
 import { embedText } from "@/lib/ai/embed";
 import { extractEntities } from "@/lib/ai/extract-entities";
+import { splitFacts } from "@/lib/ai/split-facts";
 import { isQuestionLike, makeMemoryTitle } from "@/lib/memoryHelpers";
-import { ContentType, EntityType } from "@/types";
+import { ContentType } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -42,267 +43,286 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If the input looks like a question, skip persisting it as a memory.
-    if (isQuestionLike(content)) {
-      return NextResponse.json({ skipped: true, reason: "question-like" });
+    const atomicFacts = await splitFacts(content);
+    const dedupedFacts = Array.from(new Set(atomicFacts.map((fact) => fact.trim()))).filter(Boolean);
+
+    if (dedupedFacts.length === 0) {
+      const reason = isQuestionLike(content) ? "question-like" : "no-durable-facts";
+      return NextResponse.json({ skipped: true, reason });
     }
 
-    // 1. Generate embedding (best-effort)
-    const embedding = await embedText(content);
+    const created: Array<{ memoryId: string; entitiesFound: unknown[] }> = [];
 
-    // 2. Extract entities
-    const extractedData = await extractEntities(content);
+    for (const fact of dedupedFacts) {
+      if (isQuestionLike(fact)) {
+        continue;
+      }
 
-    // If extraction returned nothing (e.g., no extraction model configured),
-    // create a fallback topic entity from the content so contexts/graph show up.
-    const totalExtracted =
-      extractedData.people.length +
-      extractedData.organizations.length +
-      extractedData.places.length +
-      extractedData.projects.length +
-      extractedData.topics.length +
-      extractedData.events.length;
+      // 1. Generate embedding (best-effort)
+      const embedding = await embedText(fact);
 
-    if (totalExtracted === 0) {
-      const fallbackName = (content || "").trim().split("\n")[0].slice(0, 80) || "Note";
-      extractedData.topics.push({ name: fallbackName });
-    }
+      // 2. Extract entities
+      const extractedData = await extractEntities(fact);
 
-    // 3. Create memory record with a concise `summary` used for titles/previews
-    const memory = await prisma.memory.create({
-      data: {
-        userId: user.id,
-        content,
-        rawInput: content,
-        summary: makeMemoryTitle(content, 12),
-        contentType: contentType as ContentType,
-        fileUrl,
-        sourceUrl,
-        tags: extractedData.topics.map((t) => t.name),
-      },
-    });
+      // If extraction returned nothing (e.g., no extraction model configured),
+      // create a fallback topic entity from the content so contexts/graph show up.
+      const totalExtracted =
+        extractedData.people.length +
+        extractedData.organizations.length +
+        extractedData.places.length +
+        extractedData.projects.length +
+        extractedData.topics.length +
+        extractedData.events.length;
 
-    if (embedding.length > 0) {
-      await prisma.$executeRaw`
-        UPDATE "Memory"
-        SET "embedding" = ${JSON.stringify(embedding)}::vector
-        WHERE "id" = ${memory.id}
-      `;
-    }
+      if (totalExtracted === 0) {
+        const fallbackName = (fact || "").trim().split("\n")[0].slice(0, 80) || "Note";
+        extractedData.topics.push({ name: fallbackName });
+      }
 
-    // 4. Process entities and create relationships
-    const entityMap: Record<string, string> = {}; // name -> id mapping
+      // 3. Create memory record with a concise `summary` used for titles/previews
+      const memory = await prisma.memory.create({
+        data: {
+          userId: user.id,
+          content: fact,
+          rawInput: fact,
+          summary: makeMemoryTitle(fact),
+          contentType: contentType as ContentType,
+          fileUrl,
+          sourceUrl,
+          tags: extractedData.topics.map((t) => t.name),
+        },
+      });
 
-    // Add people
-    for (const person of extractedData.people) {
-      const entity = await prisma.entity.upsert({
-        where: {
-          userId_name_type: {
+      if (embedding.length > 0) {
+        await prisma.$executeRaw`
+          UPDATE "Memory"
+          SET "embedding" = ${JSON.stringify(embedding)}::vector
+          WHERE "id" = ${memory.id}
+        `;
+      }
+
+      // 4. Process entities and create relationships
+      const entityMap: Record<string, string> = {}; // name -> id mapping
+
+      // Add people
+      for (const person of extractedData.people) {
+        const entity = await prisma.entity.upsert({
+          where: {
+            userId_name_type: {
+              userId: user.id,
+              name: person.name,
+              type: "PERSON",
+            },
+          },
+          update: {
+            summary: person.context || undefined,
+            attributes: {
+              relationship: person.relationship,
+            },
+          },
+          create: {
             userId: user.id,
             name: person.name,
             type: "PERSON",
+            summary: person.context,
+            attributes: {
+              relationship: person.relationship,
+            },
           },
-        },
-        update: {
-          summary: person.context || undefined,
-          attributes: {
-            relationship: person.relationship,
-          },
-        },
-        create: {
-          userId: user.id,
-          name: person.name,
-          type: "PERSON",
-          summary: person.context,
-          attributes: {
-            relationship: person.relationship,
-          },
-        },
-      });
-      entityMap[person.name] = entity.id;
+        });
+        entityMap[person.name] = entity.id;
 
-      // Create memory-entity link
-      await prisma.memoryEntity.create({
-        data: {
-          memoryId: memory.id,
-          entityId: entity.id,
-        },
-      });
-    }
+        // Create memory-entity link
+        await prisma.memoryEntity.create({
+          data: {
+            memoryId: memory.id,
+            entityId: entity.id,
+          },
+        });
+      }
 
-    // Add organizations
-    for (const org of extractedData.organizations) {
-      const entity = await prisma.entity.upsert({
-        where: {
-          userId_name_type: {
+      // Add organizations
+      for (const org of extractedData.organizations) {
+        const entity = await prisma.entity.upsert({
+          where: {
+            userId_name_type: {
+              userId: user.id,
+              name: org.name,
+              type: "ORGANIZATION",
+            },
+          },
+          update: {},
+          create: {
             userId: user.id,
             name: org.name,
             type: "ORGANIZATION",
+            attributes: { type: org.type },
           },
-        },
-        update: {},
-        create: {
-          userId: user.id,
-          name: org.name,
-          type: "ORGANIZATION",
-          attributes: { type: org.type },
-        },
-      });
-      entityMap[org.name] = entity.id;
+        });
+        entityMap[org.name] = entity.id;
 
-      await prisma.memoryEntity.create({
-        data: {
-          memoryId: memory.id,
-          entityId: entity.id,
-        },
-      });
-    }
+        await prisma.memoryEntity.create({
+          data: {
+            memoryId: memory.id,
+            entityId: entity.id,
+          },
+        });
+      }
 
-    // Add places
-    for (const place of extractedData.places) {
-      const entity = await prisma.entity.upsert({
-        where: {
-          userId_name_type: {
+      // Add places
+      for (const place of extractedData.places) {
+        const entity = await prisma.entity.upsert({
+          where: {
+            userId_name_type: {
+              userId: user.id,
+              name: place.name,
+              type: "PLACE",
+            },
+          },
+          update: {},
+          create: {
             userId: user.id,
             name: place.name,
             type: "PLACE",
+            attributes: { placeType: place.type },
           },
-        },
-        update: {},
-        create: {
-          userId: user.id,
-          name: place.name,
-          type: "PLACE",
-          attributes: { placeType: place.type },
-        },
-      });
-      entityMap[place.name] = entity.id;
+        });
+        entityMap[place.name] = entity.id;
 
-      await prisma.memoryEntity.create({
-        data: {
-          memoryId: memory.id,
-          entityId: entity.id,
-        },
-      });
-    }
+        await prisma.memoryEntity.create({
+          data: {
+            memoryId: memory.id,
+            entityId: entity.id,
+          },
+        });
+      }
 
-    // Add projects
-    for (const project of extractedData.projects) {
-      const entity = await prisma.entity.upsert({
-        where: {
-          userId_name_type: {
+      // Add projects
+      for (const project of extractedData.projects) {
+        const entity = await prisma.entity.upsert({
+          where: {
+            userId_name_type: {
+              userId: user.id,
+              name: project.name,
+              type: "PROJECT",
+            },
+          },
+          update: {},
+          create: {
             userId: user.id,
             name: project.name,
             type: "PROJECT",
+            attributes: { status: project.status },
           },
-        },
-        update: {},
-        create: {
-          userId: user.id,
-          name: project.name,
-          type: "PROJECT",
-          attributes: { status: project.status },
-        },
-      });
-      entityMap[project.name] = entity.id;
+        });
+        entityMap[project.name] = entity.id;
 
-      await prisma.memoryEntity.create({
-        data: {
-          memoryId: memory.id,
-          entityId: entity.id,
-        },
-      });
-    }
+        await prisma.memoryEntity.create({
+          data: {
+            memoryId: memory.id,
+            entityId: entity.id,
+          },
+        });
+      }
 
-    // Add topics
-    for (const topic of extractedData.topics) {
-      const entity = await prisma.entity.upsert({
-        where: {
-          userId_name_type: {
+      // Add topics
+      for (const topic of extractedData.topics) {
+        const entity = await prisma.entity.upsert({
+          where: {
+            userId_name_type: {
+              userId: user.id,
+              name: topic.name,
+              type: "TOPIC",
+            },
+          },
+          update: {},
+          create: {
             userId: user.id,
             name: topic.name,
             type: "TOPIC",
           },
-        },
-        update: {},
-        create: {
-          userId: user.id,
-          name: topic.name,
-          type: "TOPIC",
-        },
-      });
-      entityMap[topic.name] = entity.id;
+        });
+        entityMap[topic.name] = entity.id;
 
-      await prisma.memoryEntity.create({
-        data: {
-          memoryId: memory.id,
-          entityId: entity.id,
-        },
-      });
-    }
-
-    // Add events
-    for (const event of extractedData.events) {
-      const entity = await prisma.entity.upsert({
-        where: {
-          userId_name_type: {
-            userId: user.id,
-            name: event.name,
-            type: "EVENT",
-          },
-        },
-        update: {},
-        create: {
-          userId: user.id,
-          name: event.name,
-          type: "EVENT",
-          attributes: { date: event.date },
-        },
-      });
-      entityMap[event.name] = entity.id;
-
-      await prisma.memoryEntity.create({
-        data: {
-          memoryId: memory.id,
-          entityId: entity.id,
-        },
-      });
-    }
-
-    // 5. Create relationships
-    for (const rel of extractedData.relationships) {
-      const fromId = entityMap[rel.from];
-      const toId = entityMap[rel.to];
-
-      if (fromId && toId) {
-        await prisma.entityRelation.upsert({
-          where: {
-            fromEntityId_toEntityId_label: {
-              fromEntityId: fromId,
-              toEntityId: toId,
-              label: rel.label,
-            },
-          },
-          update: { strength: 1.0 },
-          create: {
-            fromEntityId: fromId,
-            toEntityId: toId,
-            label: rel.label,
-            strength: 1.0,
+        await prisma.memoryEntity.create({
+          data: {
+            memoryId: memory.id,
+            entityId: entity.id,
           },
         });
       }
+
+      // Add events
+      for (const event of extractedData.events) {
+        const entity = await prisma.entity.upsert({
+          where: {
+            userId_name_type: {
+              userId: user.id,
+              name: event.name,
+              type: "EVENT",
+            },
+          },
+          update: {},
+          create: {
+            userId: user.id,
+            name: event.name,
+            type: "EVENT",
+            attributes: { date: event.date },
+          },
+        });
+        entityMap[event.name] = entity.id;
+
+        await prisma.memoryEntity.create({
+          data: {
+            memoryId: memory.id,
+            entityId: entity.id,
+          },
+        });
+      }
+
+      // 5. Create relationships
+      for (const rel of extractedData.relationships) {
+        const fromId = entityMap[rel.from];
+        const toId = entityMap[rel.to];
+
+        if (fromId && toId) {
+          await prisma.entityRelation.upsert({
+            where: {
+              fromEntityId_toEntityId_label: {
+                fromEntityId: fromId,
+                toEntityId: toId,
+                label: rel.label,
+              },
+            },
+            update: { strength: 1.0 },
+            create: {
+              fromEntityId: fromId,
+              toEntityId: toId,
+              label: rel.label,
+              strength: 1.0,
+            },
+          });
+        }
+      }
+
+      const entitiesFound = await prisma.memoryEntity.findMany({
+        where: { memoryId: memory.id },
+        include: { entity: true },
+      });
+
+      created.push({
+        memoryId: memory.id,
+        entitiesFound: entitiesFound.map((me: (typeof entitiesFound)[number]) => me.entity),
+      });
     }
 
-    // Return response with created memory and entities
-    const entitiesFound = await prisma.memoryEntity.findMany({
-      where: { memoryId: memory.id },
-      include: { entity: true },
-    });
+    if (created.length === 0) {
+      const reason = isQuestionLike(content) ? "question-like" : "no-durable-facts";
+      return NextResponse.json({ skipped: true, reason });
+    }
 
     return NextResponse.json({
-      memoryId: memory.id,
-      entitiesFound: entitiesFound.map((me: (typeof entitiesFound)[number]) => me.entity),
+      memories: created,
       success: true,
     });
   } catch (error) {

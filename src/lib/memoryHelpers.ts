@@ -5,7 +5,7 @@ export function isQuestionLike(text?: string): boolean {
   const t = text.trim().toLowerCase();
   if (t.length === 0) return false;
 
-  // Heuristic: ends with a question mark or starts with common interrogatives
+  const normalized = t.replace(/\s+/g, " ");
   const interrogatives = [
     "what",
     "who",
@@ -18,32 +18,133 @@ export function isQuestionLike(text?: string): boolean {
     "does",
     "is",
     "are",
+    "was",
+    "were",
     "can",
     "could",
     "would",
     "should",
     "which",
+    "whats",
+    "whos",
   ];
 
-  if (t.endsWith("?")) return true;
+  if (normalized.includes("?")) return true;
 
   for (const w of interrogatives) {
-    if (t.startsWith(w + " ") || t === w) return true;
+    if (normalized.startsWith(w + " ") || normalized === w) return true;
   }
 
-  // Short inputs that look like questions
-  if (t.split(" ").length <= 6 && t.endsWith("?")) return true;
+  const commandVerbs = [
+    "list",
+    "show",
+    "tell",
+    "give",
+    "find",
+    "search",
+    "lookup",
+    "fetch",
+    "display",
+    "summarize",
+    "recap",
+    "outline",
+    "explain",
+    "remind",
+    "retrieve",
+    "get",
+    "provide",
+    "share",
+  ];
+
+  const commandPattern = new RegExp(
+    `^(please\\s+)?(${commandVerbs.join("|")})\\b`
+  );
+  if (commandPattern.test(normalized)) return true;
+
+  if (/^(can|could|would|will|should|may|might)\s+you\b/.test(normalized)) return true;
+  if (/^(tell|show|remind)\s+me\b/.test(normalized)) return true;
 
   return false;
 }
 
-export function makeMemoryTitle(text?: string, maxWords = 8): string {
+export function makeMemoryTitle(text?: string, maxWords = 16, maxChars = 120): string {
   if (!text) return "Memory";
   const cleaned = text.trim().replace(/\s+/g, " ");
-  const words = cleaned.split(" ").slice(0, maxWords);
-  let title = words.join(" ");
-  if (title.length > 60) title = title.slice(0, 57) + "...";
-  return title;
+  let base = cleaned;
+
+  const firstStop = cleaned.search(/[.!?]/);
+  if (firstStop > 0 && firstStop < maxChars) {
+    base = cleaned.slice(0, firstStop + 1);
+  }
+
+  const words = base.split(" ");
+  if (words.length > maxWords) {
+    base = words.slice(0, maxWords).join(" ");
+  }
+
+  if (base.length > maxChars) {
+    base = base.slice(0, maxChars - 3) + "...";
+  }
+
+  return base;
+}
+
+export function splitFactsHeuristic(text?: string): string[] {
+  if (!text) return [];
+  const cleaned = text.trim().replace(/\r\n/g, "\n");
+  if (!cleaned) return [];
+
+  const roughChunks = cleaned
+    .split(/\n+/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .flatMap((chunk) => chunk.split(/[.!?]+\s+/).map((item) => item.trim()))
+    .filter(Boolean);
+
+  const results: string[] = [];
+
+  for (const chunk of roughChunks) {
+    const likeMatch = chunk.match(
+      /^i\s+(like|love|enjoy|prefer|am into|am interested in)\s+(.+)$/i
+    );
+    const hobbyMatch = chunk.match(
+      /^my\s+(hobbies|interests)\s+(include|are)\s+(.+)$/i
+    );
+
+    if (likeMatch) {
+      const items = likeMatch[2]
+        .replace(/\band\b/gi, ",")
+        .split(",")
+        .map((item) => item.replace(/[.!?]+$/, "").trim())
+        .filter(Boolean);
+
+      if (items.length > 1) {
+        for (const item of items) {
+          results.push(`I like ${item}`);
+        }
+        continue;
+      }
+    }
+
+    if (hobbyMatch) {
+      const items = hobbyMatch[3]
+        .replace(/\band\b/gi, ",")
+        .split(",")
+        .map((item) => item.replace(/[.!?]+$/, "").trim())
+        .filter(Boolean);
+
+      for (const item of items) {
+        results.push(`My hobbies include ${item}`);
+      }
+      continue;
+    }
+
+    results.push(chunk);
+  }
+
+  return results
+    .map((item) => item.replace(/\s+/g, " ").trim())
+    .filter((item) => item.length > 0);
 }
 
 export function estimateTokens(text?: string): number {
@@ -162,6 +263,8 @@ export function rankMemoriesForQuery(
   limit = 5
 ): MemorySearchCandidate[] {
   const tokens = tokenizeSearchText(query);
+  const hobbyTokens = new Set(["hobby", "hobbies", "interest", "interests"]);
+  const isHobbyQuery = tokens.some((token) => hobbyTokens.has(token));
 
   const scored = memories
     .map((memory) => {
@@ -192,6 +295,10 @@ export function rankMemoriesForQuery(
       }
 
       if (memory.tags && memory.tags.some((tag) => tokens.some((token) => tag.toLowerCase().includes(token)))) {
+        score += 1.5;
+      }
+
+      if (isHobbyQuery && /\b(i like|i love|i enjoy|my hobbies|my interests)\b/.test(searchableParts)) {
         score += 1.5;
       }
 
