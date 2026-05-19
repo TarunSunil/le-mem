@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.16.2",
+    "dotenv": "^17.4.2",
     "next": "16.2.6",
     "next-auth": "^4.24.14",
     "openai": "^6.37.0",
@@ -20,7 +22,8 @@
     "react-markdown": "^9.0.3",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.0",
-    "swr": "^2.4.1"
+    "swr": "^2.4.1",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

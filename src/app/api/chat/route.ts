@@ -81,6 +81,32 @@ Format responses clearly with markdown when helpful.`;
               },
             },
           });
+          
+          if (memories.length > 0) {
+            // Retrieve embeddings via raw query since Prisma Unsupported("vector") is not mapped
+            const memoryIds = memories.map(m => m.id);
+            const rawEmbeddings: { id: string, embedding_str: string }[] = await prisma.$queryRawUnsafe(`
+              SELECT id, embedding::text AS embedding_str
+              FROM "Memory"
+              WHERE id IN (${memoryIds.map((_, i) => `$${i + 1}`).join(',')})
+            `, ...memoryIds);
+            
+            const embeddingMap = new Map<string, number[]>();
+            for (const row of rawEmbeddings) {
+              if (row.embedding_str) {
+                try {
+                  embeddingMap.set(row.id, JSON.parse(row.embedding_str));
+                } catch (e) {
+                  // ignore parse error logs
+                }
+              }
+            }
+            
+            // Assign embeddings back to memories
+            for (const m of memories) {
+              (m as any).embedding = embeddingMap.get(m.id) || null;
+            }
+          }
 
           const matches = rankMemoriesForQuery(latestUserMsg, memories, queryEmbedding, 5);
 
