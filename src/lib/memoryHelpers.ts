@@ -61,13 +61,18 @@ export function isQuestionLike(text?: string): boolean {
   );
   if (commandPattern.test(normalized)) return true;
 
-  if (/^(can|could|would|will|should|may|might)\s+you\b/.test(normalized)) return true;
+  if (/^(can|could|would|will|should|may|might)\s+you\b/.test(normalized))
+    return true;
   if (/^(tell|show|remind)\s+me\b/.test(normalized)) return true;
 
   return false;
 }
 
-export function makeMemoryTitle(text?: string, maxWords = 16, maxChars = 120): string {
+export function makeMemoryTitle(
+  text?: string,
+  maxWords = 16,
+  maxChars = 120
+): string {
   if (!text) return "Memory";
   const cleaned = text.trim().replace(/\s+/g, " ");
   let base = cleaned;
@@ -149,7 +154,6 @@ export function splitFactsHeuristic(text?: string): string[] {
 
 export function estimateTokens(text?: string): number {
   if (!text) return 0;
-  // very rough estimate: 1 token ≈ 0.75 words
   const words = text.trim().split(/\s+/).length;
   return Math.max(1, Math.round(words / 0.75));
 }
@@ -157,7 +161,6 @@ export function estimateTokens(text?: string): number {
 export function humanizeEntityType(t?: string): string {
   if (!t) return "";
   const lowered = t.toLowerCase();
-  // Map known enums to friendly names
   const map: Record<string, string> = {
     person: "Person",
     place: "Place",
@@ -174,6 +177,8 @@ export function humanizeEntityType(t?: string): string {
 export function tokenizeSearchText(text?: string): string[] {
   if (!text) return [];
 
+  // FIX: Removed calendar words ('may', 'march', 'june', etc.) from stopwords
+  // so date-based queries like "what happened on 17th May 2026" work correctly.
   const stopWords = new Set([
     "the",
     "and",
@@ -195,15 +200,12 @@ export function tokenizeSearchText(text?: string): string[] {
     "do",
     "does",
     "did",
-    "is",
     "are",
     "was",
     "were",
-    "my",
     "your",
     "our",
     "me",
-    "i",
     "to",
     "of",
     "in",
@@ -215,16 +217,21 @@ export function tokenizeSearchText(text?: string): string[] {
     "an",
     "a",
     "be",
+    // NOTE: "is", "my", "i" removed -- they appear in "I like / My hobbies" facts
+    // NOTE: "may" removed -- it's a month name needed for date queries
   ]);
 
   return text
     .toLowerCase()
     .split(/[^a-z0-9]+/g)
     .map((token) => token.trim())
-    .filter((token) => token.length >= 3 && !stopWords.has(token));
+    .filter((token) => token.length >= 2 && !stopWords.has(token));
 }
 
-export function cosineSimilarity(a?: number[] | null, b?: number[] | null): number {
+export function cosineSimilarity(
+  a?: number[] | null,
+  b?: number[] | null
+): number {
   if (!a || !b || a.length === 0 || b.length === 0 || a.length !== b.length) {
     return 0;
   }
@@ -243,6 +250,70 @@ export function cosineSimilarity(a?: number[] | null, b?: number[] | null): numb
   if (denominator === 0) return 0;
 
   return dot / denominator;
+}
+
+/** Month names mapped to their numeric string equivalents for date matching */
+const MONTH_NAMES: Record<string, string> = {
+  january: "01",
+  jan: "01",
+  february: "02",
+  feb: "02",
+  march: "03",
+  mar: "03",
+  april: "04",
+  apr: "04",
+  may: "05",
+  june: "06",
+  jun: "06",
+  july: "07",
+  jul: "07",
+  august: "08",
+  aug: "08",
+  september: "09",
+  sep: "09",
+  sept: "09",
+  october: "10",
+  oct: "10",
+  november: "11",
+  nov: "11",
+  december: "12",
+  dec: "12",
+};
+
+/**
+ * Extract a date hint from a query string, returning a simple string like
+ * "2026-05-17" or "2026-05" that can be matched against memory timestamps.
+ */
+function extractDateHint(query: string): string | null {
+  const q = query.toLowerCase();
+
+  // Match "17th May 2026" / "May 17 2026" / "17 May 2026"
+  const ordinalDay = q.match(/(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+)\s+(\d{4})/);
+  const monthFirst = q.match(/([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/);
+  const yearMonth = q.match(/([a-z]+)\s+(\d{4})/);
+  const isoDate = q.match(/(\d{4})-(\d{2})-(\d{2})/);
+
+  if (isoDate) return isoDate[0];
+
+  if (ordinalDay) {
+    const [, day, monthStr, year] = ordinalDay;
+    const month = MONTH_NAMES[monthStr];
+    if (month) return `${year}-${month}-${day.padStart(2, "0")}`;
+  }
+
+  if (monthFirst) {
+    const [, monthStr, day, year] = monthFirst;
+    const month = MONTH_NAMES[monthStr];
+    if (month) return `${year}-${month}-${day.padStart(2, "0")}`;
+  }
+
+  if (yearMonth) {
+    const [, monthStr, year] = yearMonth;
+    const month = MONTH_NAMES[monthStr];
+    if (month) return `${year}-${month}`;
+  }
+
+  return null;
 }
 
 export type MemorySearchCandidate = {
@@ -266,6 +337,9 @@ export function rankMemoriesForQuery(
   const hobbyTokens = new Set(["hobby", "hobbies", "interest", "interests"]);
   const isHobbyQuery = tokens.some((token) => hobbyTokens.has(token));
 
+  // FIX: extract date hint so "17th May 2026" queries find date-tagged memories
+  const dateHint = extractDateHint(query);
+
   const scored = memories
     .map((memory) => {
       const searchableParts = [
@@ -280,31 +354,63 @@ export function rankMemoriesForQuery(
 
       let score = 0;
 
+      // Keyword matching -- min-length now 2 chars (fixes single-letter tokens)
       for (const token of tokens) {
-        if (searchableParts.includes(token)) {
+        if (token.length >= 2 && searchableParts.includes(token)) {
           score += 1;
         }
       }
 
+      // Semantic similarity
       if (queryEmbedding && memory.embedding) {
         score += cosineSimilarity(queryEmbedding, memory.embedding) * 4;
       }
 
-      if (memory.summary && tokens.some((token) => memory.summary!.toLowerCase().includes(token))) {
+      // Summary field bonus
+      if (
+        memory.summary &&
+        tokens.some((token) =>
+          memory.summary!.toLowerCase().includes(token)
+        )
+      ) {
         score += 1;
       }
 
-      if (memory.tags && memory.tags.some((tag) => tokens.some((token) => tag.toLowerCase().includes(token)))) {
+      // Tag bonus
+      if (
+        memory.tags &&
+        memory.tags.some((tag) =>
+          tokens.some((token) => tag.toLowerCase().includes(token))
+        )
+      ) {
         score += 1.5;
       }
 
-      if (isHobbyQuery && /\b(i like|i love|i enjoy|my hobbies|my interests)\b/.test(searchableParts)) {
-        score += 1.5;
+      // Hobby query bonus
+      if (
+        isHobbyQuery &&
+        /\b(i like|i love|i enjoy|my hobbies|my interests)\b/.test(
+          searchableParts
+        )
+      ) {
+        score += 3;
       }
 
+      // Date-based scoring
+      if (dateHint && memory.createdAt) {
+        const memDateStr = memory.createdAt.toISOString().slice(0, 10);
+        if (memDateStr.startsWith(dateHint)) {
+          score += 5;
+        }
+      }
+
+      // Recency bonus (small)
       if (memory.createdAt) {
         const ageMs = Date.now() - memory.createdAt.getTime();
-        const ageBonus = Math.max(0, 1 - ageMs / (1000 * 60 * 60 * 24 * 90));
+        const ageBonus = Math.max(
+          0,
+          1 - ageMs / (1000 * 60 * 60 * 24 * 90)
+        );
         score += ageBonus * 0.25;
       }
 
