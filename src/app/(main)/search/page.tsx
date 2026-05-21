@@ -20,11 +20,11 @@ interface SearchResults {
 
 function ResultCard({ title, summary }: { title: string; summary: string }) {
   return (
-    <article className="rounded-3xl border border-white/10 bg-white/5 p-5 transition-colors hover:border-secondary-container/30 hover:bg-white/8">
-      <h3 className="text-body-lg font-medium" style={{ color: "var(--fyi-text)" }}>
+    <article className="rounded-3xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-secondary-container/30 hover:bg-white/8 md:p-5">
+      <h3 className="text-sm font-medium md:text-body-lg" style={{ color: "var(--fyi-text)" }}>
         {title}
       </h3>
-      <p className="mt-3 text-body-md leading-7" style={{ color: "var(--fyi-muted)" }}>
+      <p className="mt-2 text-xs leading-5 md:mt-3 md:text-body-md md:leading-7" style={{ color: "var(--fyi-muted)" }}>
         {summary}
       </p>
     </article>
@@ -136,28 +136,21 @@ export default function SearchPage() {
     results.projects.length === 0;
 
   return (
-    <div className="flex min-h-full flex-col px-container-padding py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+    <div className="flex min-h-full flex-col px-4 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:px-container-padding md:py-6">
       <div className="mx-auto w-full max-w-6xl">
-        <section className="glass-panel border border-white/10 p-6 md:p-8">
-          <div className="mt-5 max-w-2xl">
+        <section className="glass-panel border border-white/10 p-4 md:p-6">
+          <div className="mt-3 max-w-2xl">
             <h1
-              className="font-newsreader text-3xl leading-tight md:text-5xl"
+              className="font-newsreader text-2xl leading-tight md:text-5xl"
               style={{ color: "var(--fyi-text)" }}
             >
               Search by meaning, not just by keywords.
             </h1>
-            <p
-              className="mt-4 text-body-md md:text-body-lg"
-              style={{ color: "var(--fyi-muted)" }}
-            >
-              Ask for the memory, person, project, or category you remember and FYI
-              will surface the related notes, snippets, and context pages.
-            </p>
           </div>
 
-          <div className="mt-6 rounded-3xl border border-white/10 bg-black/20 p-3 md:p-4">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-xl text-on-surface-variant">
+          <div className="mt-4 rounded-3xl border border-white/10 bg-black/20 p-2 md:mt-6 md:p-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <span className="material-symbols-outlined text-lg text-on-surface-variant md:text-xl">
                 search
               </span>
               <input
@@ -165,13 +158,13 @@ export default function SearchPage() {
                 onChange={(event) => setQuery(event.target.value)}
                 disabled={isLoading}
                 placeholder="Search people, snippets, projects, or categories..."
-                className="w-full bg-transparent text-body-md outline-none placeholder:text-on-surface-variant disabled:opacity-50"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-on-surface-variant disabled:opacity-50 md:text-body-md"
               />
               <button
                 type="button"
                 disabled={isLoading}
                 onClick={() => searchMemories(query)}
-                className="rounded-full bg-secondary-container px-4 py-2 text-label-sm text-on-secondary-container transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="rounded-full bg-secondary-container px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-on-secondary-container transition-opacity hover:opacity-90 disabled:opacity-50 md:px-4 md:py-2 md:text-label-sm md:tracking-normal"
               >
                 {isLoading ? "..." : "Search"}
               </button>
@@ -180,7 +173,7 @@ export default function SearchPage() {
 
           {error && (
             <div
-              className="mt-4 rounded-lg border border-red-500 bg-red-500/10 p-3"
+              className="mt-3 rounded-lg border border-red-500 bg-red-500/10 p-3 text-xs leading-5 md:mt-4 md:text-body-md"
               style={{ color: "#ff6b6b" }}
             >
               Error: {error}
@@ -189,26 +182,26 @@ export default function SearchPage() {
         </section>
 
         {isEmpty && !query.trim() && (
-          <section className="mt-6 rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center">
-            <h2 className="text-headline-md font-newsreader" style={{ color: "var(--fyi-text)" }}>
+          <section className="mt-4 rounded-3xl border border-dashed border-white/10 bg-white/5 p-6 text-center md:mt-6 md:p-8">
+            <h2 className="text-xl font-newsreader md:text-headline-md" style={{ color: "var(--fyi-text)" }}>
               Search your memory timeline
             </h2>
-            <p className="mt-3 text-body-md" style={{ color: "var(--fyi-muted)" }}>
+            <p className="mt-2 text-xs leading-5 md:mt-3 md:text-body-md" style={{ color: "var(--fyi-muted)" }}>
               Start by entering a topic, person, or project. FYI will surface related memories as you add them.
             </p>
           </section>
         )}
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-3">
+        <div className="mt-6 grid gap-5 md:mt-8 md:gap-6 lg:grid-cols-3">
           <section className="space-y-4 lg:col-span-1">
             <div className="flex items-center justify-between">
               <h2
-                className="text-headline-md font-newsreader"
+                className="text-lg font-newsreader md:text-headline-md"
                 style={{ color: "#e5e2e1" }}
               >
                 People
               </h2>
-              <span className="text-label-sm text-on-surface-variant">
+              <span className="text-[11px] uppercase tracking-[0.18em] text-on-surface-variant md:text-label-sm md:tracking-normal">
                 {results.people.length}
               </span>
             </div>
@@ -226,12 +219,12 @@ export default function SearchPage() {
           <section className="space-y-4 lg:col-span-1">
             <div className="flex items-center justify-between">
               <h2
-                className="text-headline-md font-newsreader"
+                className="text-lg font-newsreader md:text-headline-md"
                 style={{ color: "#e5e2e1" }}
               >
                 Memory Snippets
               </h2>
-              <span className="text-label-sm text-on-surface-variant">
+              <span className="text-[11px] uppercase tracking-[0.18em] text-on-surface-variant md:text-label-sm md:tracking-normal">
                 {results.snippets.length}
               </span>
             </div>
@@ -249,12 +242,12 @@ export default function SearchPage() {
           <section className="space-y-4 lg:col-span-1">
             <div className="flex items-center justify-between">
               <h2
-                className="text-headline-md font-newsreader"
+                className="text-lg font-newsreader md:text-headline-md"
                 style={{ color: "#e5e2e1" }}
               >
                 Project Contexts
               </h2>
-              <span className="text-label-sm text-on-surface-variant">
+              <span className="text-[11px] uppercase tracking-[0.18em] text-on-surface-variant md:text-label-sm md:tracking-normal">
                 {results.projects.length}
               </span>
             </div>

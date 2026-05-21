@@ -179,20 +179,31 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100dvh-8.5rem)] flex-col">
-      <div className="flex-1 overflow-y-auto px-container-padding pt-6 pb-36 md:pb-28">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-          <section className="glass-panel border border-white/10 p-6 md:p-8">
-            <div className="mt-5 max-w-2xl">
+    <div className="flex min-h-[calc(100dvh-4.25rem)] flex-col">
+      <header
+        className="md:hidden fixed top-0 left-0 right-0 z-40 border-b"
+        style={{ backgroundColor: "var(--fyi-bg)", borderColor: "var(--fyi-border)" }}
+      >
+        <div className="px-4 py-2">
+          <span
+            className="font-newsreader text-label-sm uppercase tracking-[0.4em]"
+            style={{ color: "var(--fyi-highlight)" }}
+          >
+            FYI
+          </span>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-4 pt-10 pb-24 md:px-container-padding md:pt-8 md:pb-28">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 md:gap-6">
+          <section className="glass-panel rounded-2xl border border-white/10 px-4 py-4 md:rounded-3xl md:px-8 md:py-6">
+            <div className="max-w-2xl">
               <h1
-                className="font-newsreader text-3xl leading-tight md:text-5xl"
-                style={{ color: "var(--fyi-text)" }}
+                className="font-newsreader text-2xl leading-tight md:text-5xl"
+                style={{ color: "var(--fyi-highlight)" }}
               >
                 Capture your memory stream in one quiet place.
               </h1>
-              <p className="mt-4 text-body-md md:text-body-lg" style={{ color: "var(--fyi-muted)" }}>
-                Drop notes, projects, and reflections here. FYI will connect the dots and build context pages as you go.
-              </p>
             </div>
           </section>
 
@@ -219,7 +230,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="input-gradient mt-auto border-t border-white/5 px-container-padding pb-4 pt-5 md:pb-6">
+      <div className="input-gradient mt-auto border-t border-white/5 px-4 pb-3 pt-4 md:px-container-padding md:pb-6 md:pt-5">
         <div className="mx-auto w-full max-w-4xl">
           <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
         </div>

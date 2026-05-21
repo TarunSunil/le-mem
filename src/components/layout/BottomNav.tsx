@@ -17,7 +17,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex h-[calc(5rem+env(safe-area-inset-bottom))] items-start justify-around border-t px-2 pt-2 pb-[env(safe-area-inset-bottom)]" style={{backgroundColor: "var(--fyi-bg)", borderColor: "var(--fyi-border)"}}>
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex h-[calc(4.25rem+env(safe-area-inset-bottom))] items-start justify-around border-t px-2 pt-1.5 pb-[env(safe-area-inset-bottom)]" style={{backgroundColor: "var(--fyi-bg)", borderColor: "var(--fyi-border)"}}>
       {NAV_ITEMS.map((item) => {
         const isActive = pathname?.startsWith(item.href);
         return (
@@ -25,16 +25,16 @@ export function BottomNav() {
             key={item.href}
             href={item.href}
             prefetch={true}
-            className="flex flex-col items-center justify-center w-16 h-16 rounded-lg gap-1 transition-colors"
+            className="flex flex-col items-center justify-center w-14 h-14 rounded-lg gap-0.5 transition-colors"
             style={{
               color: isActive ? "var(--fyi-accent-soft)" : "var(--fyi-muted)",
               backgroundColor: isActive ? "var(--fyi-accent-strong)" : "transparent",
             }}
           >
-            <span className="material-symbols-outlined text-lg">
+            <span className="material-symbols-outlined text-base">
               {item.icon}
             </span>
-            <span className="text-label-sm">{item.label}</span>
+            <span className="text-[10px] uppercase tracking-[0.16em]">{item.label}</span>
           </Link>
         );
       })}

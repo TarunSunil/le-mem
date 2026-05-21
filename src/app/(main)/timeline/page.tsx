@@ -16,16 +16,13 @@ function TimelineSkeleton() {
 
 export default function TimelinePage() {
   return (
-    <div className="flex min-h-full flex-col px-container-padding py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+    <div className="flex min-h-full flex-col px-4 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:px-container-padding md:py-6">
       <div className="mx-auto w-full max-w-5xl">
-        <section className="glass-panel border border-white/10 p-6 md:p-8">
-          <div className="mt-5 max-w-2xl">
-            <h1 className="font-newsreader text-3xl leading-tight md:text-5xl" style={{ color: "var(--fyi-text)" }}>
+        <section className="glass-panel border border-white/10 p-4 md:p-6">
+          <div className="mt-3 max-w-2xl">
+            <h1 className="font-newsreader text-2xl leading-tight md:text-5xl" style={{ color: "var(--fyi-text)" }}>
               Every memory, ordered by time and context.
             </h1>
-            <p className="mt-4 text-body-md md:text-body-lg" style={{ color: "var(--fyi-muted)" }}>
-              The timeline turns scattered notes into a story. You can scan what happened today, revisit what mattered yesterday, and trace how a topic evolved across the week.
-            </p>
           </div>
         </section>
 

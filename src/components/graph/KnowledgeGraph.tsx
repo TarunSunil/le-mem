@@ -58,7 +58,7 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
   const isEmpty = !isLoading && graphData.nodes.length === 0;
 
   return (
-    <div ref={containerRef} className="relative h-full min-h-140 overflow-hidden rounded-3xl border border-white/10 bg-black/20">
+    <div ref={containerRef} className="relative h-full min-h-[320px] overflow-hidden rounded-3xl border border-white/10 bg-black/20 md:min-h-[520px]">
       {dimensions.width > 0 ? (
         <ForceGraph2D
           width={dimensions.width}
@@ -73,7 +73,8 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
           linkColor={() => "rgba(176,178,255,0.35)"}
           nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
             const label = node.name;
-            const fontSize = Math.max(10, 14 / globalScale);
+            const baseFont = dimensions.width < 480 ? 10 : 14;
+            const fontSize = Math.max(9, baseFont / globalScale);
             ctx.font = `${fontSize}px Sora, sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";

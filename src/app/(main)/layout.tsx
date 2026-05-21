@@ -2,7 +2,6 @@
 
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { TopBar } from "@/components/layout/TopBar";
 import { getCachedSession } from "@/lib/auth/get-session";
 import { redirect } from "next/navigation";
 
@@ -22,11 +21,8 @@ export default async function MainLayout({
       {/* Desktop Sidebar */}
       <Sidebar />
 
-      {/* Mobile TopBar */}
-      <TopBar />
-
       {/* Main Content */}
-      <main className="min-h-0 flex-1 md:ml-64 pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 overflow-visible">
+      <main className="min-h-0 flex-1 md:ml-64 pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0 overflow-visible">
         <div className="min-h-full w-full">{children}</div>
       </main>
 

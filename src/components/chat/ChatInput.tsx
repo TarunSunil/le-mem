@@ -39,38 +39,38 @@ export function ChatInput({ onSend, isLoading = false }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="fyi-input-panel">
-      <div className="flex items-end gap-3">
-        <div className="flex-1 rounded-3xl border border-white/10 bg-black/20 px-4 py-3">
-          <textarea
-            ref={textareaRef}
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            disabled={isLoading}
-            placeholder="Describe a memory, paste a note, or ask FYI..."
-            className="max-h-44 w-full resize-none bg-transparent text-body-md leading-7 outline-none placeholder:text-on-surface-variant disabled:opacity-50"
-          />
-
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-label-sm text-on-surface-variant">
-              {isLoading ? "Processing..." : "Ready"}
-            </div>
-
-            <button
-              type="submit"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
-              disabled={!message.trim() || isLoading}
-              aria-label="Send message"
-            >
-              <span className="material-symbols-outlined text-xl">
-                {isLoading ? "hourglass_empty" : "send"}
-              </span>
-            </button>
-          </div>
-        </div>
+    <form onSubmit={handleSubmit} className="fyi-input-panel px-3 py-3 md:px-4 md:py-4">
+      <div className="flex items-center gap-2 md:gap-3">
+        <span
+          className="material-symbols-outlined text-lg md:text-xl"
+          style={{ color: "var(--fyi-muted)" }}
+        >
+          storage
+        </span>
+        <textarea
+          ref={textareaRef}
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          onKeyDown={handleKeyDown}
+          rows={1}
+          disabled={isLoading}
+          placeholder="Describe a memory, paste a note, or ask FYI..."
+          className="max-h-36 w-full flex-1 resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-on-surface-variant disabled:opacity-50 md:max-h-40 md:text-body-md md:leading-7"
+        />
+        <button
+          type="submit"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 md:h-11 md:w-11"
+          disabled={!message.trim() || isLoading}
+          aria-label="Send message"
+        >
+          <span className="material-symbols-outlined text-lg md:text-xl">
+            {isLoading ? "hourglass_empty" : "send"}
+          </span>
+        </button>
       </div>
+      <span className="sr-only" aria-live="polite">
+        {isLoading ? "Processing" : "Ready"}
+      </span>
     </form>
   );
 }

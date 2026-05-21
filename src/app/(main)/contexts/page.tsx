@@ -103,26 +103,23 @@ export default async function ContextsPage() {
   ];
 
   return (
-    <div className="flex min-h-full flex-col px-container-padding py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+    <div className="flex min-h-full flex-col px-4 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:px-container-padding md:py-6">
       <div className="mx-auto w-full max-w-6xl">
-        <section className="glass-panel border border-white/10 p-6 md:p-8">
-          <div className="mt-5 max-w-2xl">
-            <h1 className="font-newsreader text-3xl leading-tight md:text-5xl" style={{ color: "var(--fyi-text)" }}>
+        <section className="glass-panel border border-white/10 p-4 md:p-6">
+          <div className="mt-3 max-w-2xl">
+            <h1 className="font-newsreader text-2xl leading-tight md:text-5xl" style={{ color: "var(--fyi-text)" }}>
               Everything you know, organized around your profile, projects, and working domains.
             </h1>
-            <p className="mt-4 text-body-md md:text-body-lg" style={{ color: "var(--fyi-muted)" }}>
-              Each context page grows automatically as new memories arrive. Open one to see the notes, relationships, and categories clustered around that entity.
-            </p>
           </div>
         </section>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-3">
+        <div className="mt-4 grid gap-3 md:mt-6 md:grid-cols-3">
           {stats.map(([value, label]) => (
-            <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-2xl font-semibold" style={{ color: "var(--fyi-text)" }}>
+            <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-3 md:p-4">
+              <div className="text-xl font-semibold md:text-2xl" style={{ color: "var(--fyi-text)" }}>
                 {value}
               </div>
-              <div className="mt-1 text-label-sm" style={{ color: "var(--fyi-muted)" }}>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.18em] md:text-label-sm" style={{ color: "var(--fyi-muted)" }}>
                 {label}
               </div>
             </div>
@@ -130,37 +127,37 @@ export default async function ContextsPage() {
         </div>
 
         {groups.length === 0 && (
-          <div className="mt-10 rounded-3xl border border-dashed border-white/10 bg-white/5 p-10 text-center">
-            <h2 className="text-headline-md font-newsreader" style={{ color: "var(--fyi-text)" }}>
+          <div className="mt-8 rounded-3xl border border-dashed border-white/10 bg-white/5 p-6 text-center md:mt-10 md:p-10">
+            <h2 className="text-xl font-newsreader md:text-headline-md" style={{ color: "var(--fyi-text)" }}>
               No contexts yet
             </h2>
-            <p className="mt-3 text-body-md" style={{ color: "var(--fyi-muted)" }}>
+            <p className="mt-2 text-xs leading-5 md:mt-3 md:text-body-md" style={{ color: "var(--fyi-muted)" }}>
               Add memories in chat and FYI will automatically build context pages as it learns.
             </p>
           </div>
         )}
 
         {groups.length > 0 && groups.map((group) => (
-          <div key={group.id} className="mt-10">
-            <div className="mb-6">
-              <h2 className="font-newsreader text-2xl md:text-3xl" style={{ color: "var(--fyi-text)" }}>
+          <div key={group.id} className="mt-8 md:mt-10">
+            <div className="mb-4 md:mb-6">
+              <h2 className="font-newsreader text-xl md:text-3xl" style={{ color: "var(--fyi-text)" }}>
                 {group.title}
               </h2>
             </div>
 
             {group.contexts.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
                 {group.contexts.map((context) => (
                   <Link
                     key={context.id}
                     href={`/contexts/${context.id}`}
-                    className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 transition-all hover:border-white/20 hover:bg-white/10"
+                    className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 transition-all hover:border-white/20 hover:bg-white/10 md:p-6"
                   >
                     <div className="relative z-10">
                       <div className="flex items-start justify-between">
                         <div>
                           <span
-                            className="mb-2 inline-block rounded-full px-2 py-1 text-label-xs"
+                            className="mb-2 inline-block rounded-full px-2 py-1 text-[11px] uppercase tracking-[0.16em] md:text-label-sm"
                             style={{
                               backgroundColor: `${context.accent}20`,
                               color: context.accent,
@@ -168,12 +165,12 @@ export default async function ContextsPage() {
                           >
                             {context.label}
                           </span>
-                          <h3 className="mt-3 font-newsreader text-xl leading-tight" style={{ color: "var(--fyi-text)" }}>
+                          <h3 className="mt-2 font-newsreader text-lg leading-tight md:mt-3 md:text-xl" style={{ color: "var(--fyi-text)" }}>
                             {context.title}
                           </h3>
                         </div>
                       </div>
-                      <p className="mt-3 text-body-sm" style={{ color: "var(--fyi-muted)" }}>
+                      <p className="mt-2 text-xs leading-5 md:mt-3 md:text-body-sm" style={{ color: "var(--fyi-muted)" }}>
                         {context.summary}
                       </p>
                     </div>

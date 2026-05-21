@@ -39,22 +39,22 @@ function TimelineItem({
   };
 
   return (
-    <article className="rounded-3xl border border-white/10 bg-white/5 p-5 transition-colors hover:border-secondary-container/30 hover:bg-white/8">
+    <article className="rounded-3xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-secondary-container/30 hover:bg-white/8 md:p-5">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary-container/15 text-secondary">
-          <span className="material-symbols-outlined text-xl">{getIcon(type)}</span>
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary-container/15 text-secondary md:h-10 md:w-10">
+          <span className="material-symbols-outlined text-lg md:text-xl">{getIcon(type)}</span>
         </div>
         <div>
-          <p className="text-label-sm uppercase tracking-[0.2em]" style={{ color: "var(--fyi-accent)" }}>
+          <p className="text-[10px] uppercase tracking-[0.22em] md:text-label-sm" style={{ color: "var(--fyi-accent)" }}>
             {type}
           </p>
-          <h2 className="mt-1 text-body-md font-medium" style={{ color: "#e5e2e1" }}>
+          <h2 className="mt-1 text-sm font-medium md:text-body-md" style={{ color: "#e5e2e1" }}>
             {title}
           </h2>
         </div>
       </div>
 
-      <p className="mt-4 text-body-md leading-7" style={{ color: "var(--fyi-muted)" }}>
+      <p className="mt-3 text-xs leading-5 md:mt-4 md:text-body-md md:leading-7" style={{ color: "var(--fyi-muted)" }}>
         {summary}
       </p>
     </article>
@@ -129,17 +129,17 @@ export async function TimelineContent() {
 
   return (
     <>
-      <div className="mt-6 grid gap-3 md:grid-cols-3">
+      <div className="mt-4 grid gap-3 md:mt-6 md:grid-cols-3">
         {[
           [memories.length.toString(), "memories total"],
           ["0", "people connected"],
           ["0", "context pages updated"],
         ].map(([value, label]) => (
-          <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="text-2xl font-semibold" style={{ color: "#e5e2e1" }}>
+          <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-3 md:p-4">
+            <div className="text-xl font-semibold md:text-2xl" style={{ color: "#e5e2e1" }}>
               {value}
             </div>
-            <div className="mt-1 text-label-sm" style={{ color: "var(--fyi-muted)" }}>
+            <div className="mt-1 text-[11px] uppercase tracking-[0.18em] md:text-label-sm" style={{ color: "var(--fyi-muted)" }}>
               {label}
             </div>
           </div>
@@ -147,26 +147,26 @@ export async function TimelineContent() {
       </div>
 
       {Object.keys(groupedMemories).length === 0 ? (
-        <div className="mt-8 text-center" style={{ color: "var(--fyi-muted)" }}>
+        <div className="mt-6 text-center text-xs leading-5 md:mt-8 md:text-body-md" style={{ color: "var(--fyi-muted)" }}>
           No memories yet. Start by adding a memory in the chat!
         </div>
       ) : (
-        <div className="mt-8 space-y-8">
+        <div className="mt-6 space-y-6 md:mt-8 md:space-y-8">
           {dateOrder.map((dateKey) => {
             const items = groupedMemories[dateKey];
             if (!items || items.length === 0) return null;
 
             return (
               <section key={dateKey}>
-                <div className="mb-4 flex items-center gap-3">
+                <div className="mb-3 flex items-center gap-3 md:mb-4">
                   <div className="h-px flex-1 bg-white/10" />
-                  <h2 className="text-label-sm uppercase tracking-[0.24em]" style={{ color: "var(--fyi-accent)" }}>
+                  <h2 className="text-[10px] uppercase tracking-[0.24em] md:text-label-sm" style={{ color: "var(--fyi-accent)" }}>
                     {dateKey}
                   </h2>
                   <div className="h-px flex-1 bg-white/10" />
                 </div>
 
-                <div className="grid gap-4">
+                <div className="grid gap-3 md:gap-4">
                   {items.map((item, index) => (
                     <TimelineItem
                       key={`${item.id}-${index}`}
