@@ -1,6 +1,6 @@
 "use client";
 
-import { ChatInput } from "@/components/chat/ChatInput";
+import { ChatInput, type ChatMode } from "@/components/chat/ChatInput";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { useSession } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
@@ -9,6 +9,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   contexts?: string[];
+  mode?: ChatMode;
 }
 
 export default function ChatPage() {
@@ -20,95 +21,76 @@ export default function ChatPage() {
   const storageKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only clear stored messages when the user is definitively signed out.
     if (status === "unauthenticated") {
-      if (storageKeyRef.current) {
-        sessionStorage.removeItem(storageKeyRef.current);
-      }
-
+      if (storageKeyRef.current) sessionStorage.removeItem(storageKeyRef.current);
       storageKeyRef.current = null;
       setMessages([]);
       return;
     }
 
-    // If authenticated and we have an email, load stored messages.
     if (status === "authenticated" && session?.user?.email) {
-      const storageKey = `le-mem:chat-history:${session.user.email}`;
-      storageKeyRef.current = storageKey;
-
+      const key = `le-mem:chat-history:${session.user.email}`;
+      storageKeyRef.current = key;
       try {
-        const storedMessages = sessionStorage.getItem(storageKey);
-        setMessages(storedMessages ? (JSON.parse(storedMessages) as Message[]) : []);
+        const stored = sessionStorage.getItem(key);
+        setMessages(stored ? (JSON.parse(stored) as Message[]) : []);
       } catch {
-        sessionStorage.removeItem(storageKey);
+        sessionStorage.removeItem(key);
         setMessages([]);
       }
     }
   }, [session?.user?.email, status]);
 
   useEffect(() => {
-    if (!storageKeyRef.current) {
-      return;
-    }
-
+    if (!storageKeyRef.current) return;
     sessionStorage.setItem(storageKeyRef.current, JSON.stringify(messages));
   }, [messages]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, mode: ChatMode) => {
     if (!content.trim()) return;
 
     if (status !== "authenticated" || !session?.user?.email) {
-      setError("Please sign in to send messages and save memories.");
+      setError("Please sign in to send messages.");
       return;
     }
 
-    // Add user message
-    const userMessage: Message = { role: "user", content };
+    const userMessage: Message = { role: "user", content, mode };
     setMessages((prev) => [...prev, userMessage]);
     setError(null);
     setIsLoading(true);
 
     try {
-      const memoryResponse = await fetch("/api/memory/ingest", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content,
-          contentType: "CONTEXT_UPDATE",
-        }),
-      });
+      if (mode === "store") {
+        const memRes = await fetch("/api/memory/ingest", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content, contentType: "CONTEXT_UPDATE" }),
+        });
 
-      if (!memoryResponse.ok) {
-        let errorMessage = `Failed to save memory (${memoryResponse.status})`;
-
-        try {
-          const contentType = memoryResponse.headers.get("content-type") ?? "";
-          if (contentType.includes("application/json")) {
-            const errorBody = await memoryResponse.json();
-            if (errorBody?.error) {
-              errorMessage = errorBody.error;
+        if (!memRes.ok) {
+          let errMsg = `Failed to save memory (${memRes.status})`;
+          try {
+            const ct = memRes.headers.get("content-type") ?? "";
+            if (ct.includes("application/json")) {
+              const body = await memRes.json();
+              if (body?.error) errMsg = body.error;
+            } else {
+              const txt = await memRes.text();
+              if (txt.trim()) errMsg = txt;
             }
-          } else {
-            const errorText = await memoryResponse.text();
-            if (errorText.trim()) {
-              errorMessage = errorText;
-            }
+          } catch {
+            // Keep fallback.
           }
-        } catch {
-          // Keep the status-based fallback when error parsing fails.
+          throw new Error(errMsg);
         }
-
-        throw new Error(errorMessage);
       }
 
-      // Call the chat API with streaming
-      const response = await fetch("/api/chat", {
+      const chatRes = await fetch("/api/chat", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -117,55 +99,43 @@ export default function ChatPage() {
             role: m.role,
             content: m.content,
           })),
+          mode,
         }),
       });
 
-      if (!response.ok) {
-        let errorMessage = `Failed to send message (${response.status})`;
-
+      if (!chatRes.ok) {
+        let errMsg = `Failed to send message (${chatRes.status})`;
         try {
-          const contentType = response.headers.get("content-type") ?? "";
-          if (contentType.includes("application/json")) {
-            const errorBody = await response.json();
-            if (errorBody?.error) {
-              errorMessage = errorBody.error;
-            }
+          const ct = chatRes.headers.get("content-type") ?? "";
+          if (ct.includes("application/json")) {
+            const body = await chatRes.json();
+            if (body?.error) errMsg = body.error;
           } else {
-            const errorText = await response.text();
-            if (errorText.trim()) {
-              errorMessage = errorText;
-            }
+            const txt = await chatRes.text();
+            if (txt.trim()) errMsg = txt;
           }
         } catch {
-          // Keep status-based fallback when error parsing fails.
+          // Keep fallback.
         }
-
-        throw new Error(errorMessage);
+        throw new Error(errMsg);
       }
 
-      // Handle streaming response
-      const reader = response.body?.getReader();
+      const reader = chatRes.body?.getReader();
       if (!reader) throw new Error("No response body");
 
-      let assistantMessage = "";
-
+      let assistantContent = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        assistantContent += new TextDecoder().decode(value);
 
-        const chunk = new TextDecoder().decode(value);
-        assistantMessage += chunk;
-
-        // Update the assistant message in real-time.
-        // If the last message is already an assistant message, update its content,
-        // otherwise push a new assistant message once.
         setMessages((prev) => {
           const updated = [...prev];
           const last = updated[updated.length - 1];
           if (last && last.role === "assistant") {
-            last.content = assistantMessage;
+            last.content = assistantContent;
           } else {
-            updated.push({ role: "assistant", content: assistantMessage });
+            updated.push({ role: "assistant", content: assistantContent });
           }
           return updated;
         });
@@ -204,21 +174,31 @@ export default function ChatPage() {
               >
                 Capture your memory stream in one quiet place.
               </h1>
+              <p
+                className="mt-2 text-xs leading-5 md:mt-3 md:text-body-md"
+                style={{ color: "var(--fyi-muted)" }}
+              >
+                Use <strong style={{ color: "var(--fyi-accent-soft)" }}>Store</strong> to save
+                memories. Use <strong style={{ color: "var(--fyi-accent-2-soft)" }}>Ask</strong> to
+                query them. Your questions are never stored.
+              </p>
             </div>
           </section>
 
           <section className="space-y-3">
-            {messages.length > 0 && messages.map((message, index) => (
+            {messages.map((message, index) => (
               <MessageBubble
                 key={`${message.role}-${index}`}
                 role={message.role}
                 content={message.content}
                 contexts={message.contexts}
+                mode={message.mode}
               />
             ))}
+
             {error && (
               <div
-                className="rounded-lg border border-red-500 bg-red-500/10 p-4"
+                className="rounded-lg border border-red-500 bg-red-500/10 p-4 text-sm"
                 style={{ color: "#ff6b6b" }}
               >
                 Error: {error}

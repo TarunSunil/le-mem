@@ -25,9 +25,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { messages } = (await req.json()) as {
+    const body = (await req.json()) as {
       messages?: Array<{ role: string; content: string }>;
+      mode?: "store" | "ask";
     };
+
+    const { messages, mode = "store" } = body;
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -46,7 +49,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Build memory context for the system prompt
     let memoryContext = "";
     const latestUserMsg = messages
       .slice()
@@ -60,7 +62,6 @@ export async function POST(req: NextRequest) {
         });
 
         if (user) {
-          // Generate query embedding (best-effort)
           let queryEmbedding: number[] | null = null;
           try {
             const emb = await embedText(latestUserMsg);
@@ -69,19 +70,15 @@ export async function POST(req: NextRequest) {
             console.warn("Embedding generation skipped:", e);
           }
 
-          // Fetch recent memories
           const memories = await prisma.memory.findMany({
             where: { userId: user.id },
             orderBy: { createdAt: "desc" },
             take: 300,
             include: {
-              entities: {
-                include: { entity: true },
-              },
+              entities: { include: { entity: true } },
             },
           });
 
-          // Attach stored embeddings via raw query (safe approach)
           if (memories.length > 0 && queryEmbedding) {
             try {
               const rawRows = await prisma.$queryRaw<
@@ -99,7 +96,7 @@ export async function POST(req: NextRequest) {
                   try {
                     embMap.set(row.id, JSON.parse(row.embedding));
                   } catch {
-                    // ignore parse errors
+                    // ignore
                   }
                 }
               }
@@ -107,16 +104,16 @@ export async function POST(req: NextRequest) {
                 (m as any).embedding = embMap.get(m.id) ?? null;
               }
             } catch (e) {
-              console.warn("Could not load embeddings for chat context:", e);
+              console.warn("Could not load embeddings:", e);
             }
           }
 
-          // Use top 10 matches but ALWAYS call Gemini
+          const topK = mode === "ask" ? 10 : 5;
           const matches = rankMemoriesForQuery(
             latestUserMsg,
             memories,
             queryEmbedding,
-            10
+            topK
           );
 
           if (matches.length > 0) {
@@ -134,42 +131,45 @@ export async function POST(req: NextRequest) {
               })
               .join("\n");
           } else if (memories.length > 0) {
-            // Fallback: provide the 5 most recent memories
             memoryContext = memories
               .slice(0, 5)
-              .map((m) => {
-                const dateStr = m.createdAt
-                  ? new Date(m.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
-                  : "";
-                const prefix = dateStr ? `[${dateStr}] ` : "";
-                return `- ${prefix}${m.summary || m.content.slice(0, 300)}`;
-              })
+              .map((m) => `- ${m.summary || m.content.slice(0, 300)}`)
               .join("\n");
           }
         }
       } catch (e) {
-        console.warn("Memory lookup failed for chat context:", e);
+        console.warn("Memory lookup failed:", e);
       }
     }
 
-    const systemPrompt = memoryContext
-      ? `You are FYI, an AI assistant for a personal memory operating system.
-Your role is to help users organize, retrieve, and understand their memories and connections.
-Answer using ONLY the relevant memories listed below. Do not invent or infer facts beyond what is provided.
-If the memories do not contain the answer, say you don't have that recorded yet and suggest the user add it.
-Be conversational and use markdown formatting when helpful.
+    let systemPrompt: string;
 
-Relevant memories:
+    if (mode === "ask") {
+      systemPrompt = memoryContext
+        ? `You are FYI, a personal memory assistant. Answer the user's question using ONLY the memories listed below. Be direct, clear, and human.
+
+Rules you must follow:
+- Answer ONLY what was asked. Never add unrequested information.
+- If the answer is a list, use a clean bullet list.
+- If it is a single fact, answer in one or two sentences.
+- Use markdown for structure only when it genuinely helps.
+- Do NOT say "Based on your memories" or add any preamble. Start with the answer immediately.
+- Do NOT invent, infer, or assume anything not present in the memories below.
+- If the memories do not contain the answer, say exactly: "I don't have that recorded yet." and nothing more.
+
+Memories:
 ${memoryContext}`
-      : `You are FYI, an AI assistant for a personal memory operating system.
-You currently have no stored memories for this user. Let them know they haven't added any memories yet
-and encourage them to start by sharing something about themselves in the chat.`;
+        : `You are FYI, a personal memory assistant. The user has asked a question but has no memories stored yet.
+Reply with exactly one sentence: "I don't have anything stored yet - switch to Store mode and tell me about yourself first."`;
+    } else {
+      systemPrompt = memoryContext
+        ? `You are FYI, a personal memory assistant. The user has just shared information for you to remember. Briefly acknowledge what you've understood and saved in 1-2 friendly sentences. Do NOT ask follow-up questions. Do NOT volunteer extra information.
 
-    // Convert messages to Gemini format
+What was just stored:
+${memoryContext}`
+        : `You are FYI, a personal memory assistant. The user has just shared something with you. Acknowledge in one warm sentence that you've noted it, without repeating it back verbatim.`;
+    }
+
     const contents = messages.map((msg) => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }],
@@ -184,8 +184,8 @@ and encourage them to start by sharing something about themselves in the chat.`;
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents,
         generation_config: {
-          temperature: 0.7,
-          max_output_tokens: 1024,
+          temperature: mode === "ask" ? 0.2 : 0.5,
+          max_output_tokens: mode === "ask" ? 1024 : 256,
         },
       }),
     });
@@ -222,7 +222,6 @@ and encourage them to start by sharing something about themselves in the chat.`;
                 for (let i = 0; i < buffer.length; i++) {
                   if (buffer[i] === "{") braceCount++;
                   if (buffer[i] === "}") braceCount--;
-
                   if (braceCount === 0 && buffer[i] === "}") {
                     endIndex = i;
                     break;
@@ -244,16 +243,14 @@ and encourage them to start by sharing something about themselves in the chat.`;
                       if (candidate.content?.parts) {
                         for (const part of candidate.content.parts) {
                           if (part.text) {
-                            controller.enqueue(
-                              new TextEncoder().encode(part.text)
-                            );
+                            controller.enqueue(new TextEncoder().encode(part.text));
                           }
                         }
                       }
                     }
                   }
-                } catch (e) {
-                  // ignore JSON parse errors for incomplete chunks
+                } catch {
+                  // ignore incomplete JSON chunks
                 }
               }
             }

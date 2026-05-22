@@ -2,15 +2,18 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
+import type { ChatMode } from "@/components/chat/ChatInput";
 
 type MessageBubbleProps = {
   role: "user" | "assistant";
   content: string;
   contexts?: string[];
+  mode?: ChatMode;
 };
 
-export function MessageBubble({ role, content, contexts }: MessageBubbleProps) {
+export function MessageBubble({ role, content, contexts, mode }: MessageBubbleProps) {
   const isUser = role === "user";
+  const isAsk = mode === "ask";
 
   return (
     <article
@@ -19,21 +22,53 @@ export function MessageBubble({ role, content, contexts }: MessageBubbleProps) {
         isUser ? "ml-auto bubble-user" : "bubble-ai"
       )}
     >
-      <div
-        className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] md:text-label-sm md:tracking-normal"
-        style={{ color: isUser ? "var(--fyi-accent)" : "var(--fyi-muted)" }}
-      >
-        <span className="material-symbols-outlined text-sm md:text-base">{isUser ? "person" : "auto_awesome"}</span>
-        {isUser ? "You" : "FYI"}
+      <div className="flex items-center gap-2">
+        <div
+          className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] md:text-label-sm md:tracking-normal"
+          style={{
+            color: isUser
+              ? isAsk
+                ? "var(--fyi-accent-2)"
+                : "var(--fyi-accent)"
+              : "var(--fyi-muted)",
+          }}
+        >
+          <span className="material-symbols-outlined text-sm md:text-base">
+            {isUser ? (isAsk ? "manage_search" : "save") : "auto_awesome"}
+          </span>
+          {isUser ? (isAsk ? "Ask" : "Store") : "FYI"}
+        </div>
+
+        {isUser && mode && (
+          <span
+            className="rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em]"
+            style={
+              isAsk
+                ? {
+                    backgroundColor: "var(--fyi-accent-2-strong)",
+                    color: "var(--fyi-accent-2-soft)",
+                  }
+                : {
+                    backgroundColor: "var(--fyi-accent-strong)",
+                    color: "var(--fyi-accent-soft)",
+                  }
+            }
+          >
+            {isAsk ? "not stored" : "stored"}
+          </span>
+        )}
       </div>
 
-      <div className="mt-2 fyi-markdown text-sm leading-6 md:mt-3 md:text-base md:leading-7" style={{ color: "#e5e2e1" }}>
+      <div
+        className="mt-2 fyi-markdown text-sm leading-6 md:mt-3 md:text-base md:leading-7"
+        style={{ color: "#e5e2e1" }}
+      >
         <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
           {content}
         </ReactMarkdown>
       </div>
 
-      {contexts && contexts.length > 0 ? (
+      {contexts && contexts.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
           {contexts.map((context) => (
             <span key={context} className="context-chip text-label-sm">
@@ -41,7 +76,7 @@ export function MessageBubble({ role, content, contexts }: MessageBubbleProps) {
             </span>
           ))}
         </div>
-      ) : null}
+      )}
     </article>
   );
 }
