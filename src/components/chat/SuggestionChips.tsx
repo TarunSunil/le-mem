@@ -1,17 +1,23 @@
 "use client";
 
-import { TARUN_SUGGESTIONS } from "@/lib/context-registry";
-
-const SUGGESTIONS = TARUN_SUGGESTIONS;
+const DEFAULT_SUGGESTIONS = [
+  "I'm a software engineer at [company]",
+  "My hobbies include...",
+  "I'm working on a project called...",
+];
 
 interface SuggestionChipsProps {
   onSuggest?: (suggestion: string) => void;
+  suggestions?: string[];
 }
 
-export function SuggestionChips({ onSuggest }: SuggestionChipsProps) {
+export function SuggestionChips({
+  onSuggest,
+  suggestions = DEFAULT_SUGGESTIONS,
+}: SuggestionChipsProps) {
   return (
     <section className="flex flex-wrap gap-2">
-      {SUGGESTIONS.map((suggestion) => (
+      {suggestions.map((suggestion) => (
         <button
           key={suggestion}
           type="button"

@@ -1,10 +1,20 @@
 // src/lib/ai/gemini-fallback.ts
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-function isQuotaError(error: any): boolean {
-  if (error?.status === 429) return true;
-  if (error?.response?.status === 429) return true;
-  return /429|quota/i.test(error?.message || "");
+function getErrorField(error: unknown, field: string): unknown {
+  return error && typeof error === "object" && field in error
+    ? (error as Record<string, unknown>)[field]
+    : undefined;
+}
+
+function isQuotaError(error: unknown): boolean {
+  if (getErrorField(error, "status") === 429) return true;
+
+  const response = getErrorField(error, "response");
+  if (getErrorField(response, "status") === 429) return true;
+
+  const message = getErrorField(error, "message");
+  return /429|quota/i.test(typeof message === "string" ? message : "");
 }
 
 export async function withGeminiFallback<T>(
@@ -22,7 +32,7 @@ export async function withGeminiFallback<T>(
     try {
       const genAI = new GoogleGenerativeAI(key1);
       return await operation(genAI);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (!key2 || !isQuotaError(error)) {
         throw error;
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { KnowledgeGraph } from "@/components/graph/KnowledgeGraph";
 import { GraphFilters } from "@/components/graph/GraphFilters";
 import useSWR from "swr";
@@ -23,8 +23,7 @@ export default function GraphPage() {
 
   const nodeCount = graphData?.nodes.length || 0;
   const linkCount = graphData?.links.length || 0;
-  const didInitRef = useRef(false);
-  const [activeTypes, setActiveTypes] = useState<EntityType[]>([]);
+  const [activeTypes, setActiveTypes] = useState<EntityType[] | null>(null);
 
   const availableTypes = useMemo(() => {
     if (!graphData?.nodes?.length) return [];
@@ -35,24 +34,22 @@ export default function GraphPage() {
     return ENTITY_TYPE_ORDER.filter((type) => types.has(type));
   }, [graphData]);
 
-  useEffect(() => {
-    if (didInitRef.current) return;
-    if (availableTypes.length > 0) {
-      setActiveTypes(availableTypes);
-      didInitRef.current = true;
-    }
-  }, [availableTypes]);
+  const selectedTypes = activeTypes ?? availableTypes;
 
   const filteredData = useMemo(() => {
     if (!graphData) return undefined;
-    if (!didInitRef.current) return graphData;
+    if (activeTypes === null) return graphData;
     if (activeTypes.length === 0) return { nodes: [], links: [] };
 
     const nodes = graphData.nodes.filter((node) => activeTypes.includes(node.type));
     const nodeIds = new Set(nodes.map((node) => node.id));
+    const linkEndpointId = (endpoint: unknown) =>
+      endpoint && typeof endpoint === "object" && "id" in endpoint
+        ? String(endpoint.id)
+        : String(endpoint);
     const links = graphData.links.filter((link) => {
-      const sourceId = typeof link.source === "object" ? (link.source as any).id : link.source;
-      const targetId = typeof link.target === "object" ? (link.target as any).id : link.target;
+      const sourceId = linkEndpointId(link.source);
+      const targetId = linkEndpointId(link.target);
       return nodeIds.has(sourceId) && nodeIds.has(targetId);
     });
 
@@ -66,7 +63,9 @@ export default function GraphPage() {
 
   const handleToggleType = (type: EntityType) => {
     setActiveTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+      (prev ?? availableTypes).includes(type)
+        ? (prev ?? availableTypes).filter((t) => t !== type)
+        : [...(prev ?? availableTypes), type]
     );
   };
 
@@ -148,7 +147,7 @@ export default function GraphPage() {
 
             <GraphFilters
               availableTypes={availableTypes}
-              activeTypes={activeTypes}
+              activeTypes={selectedTypes}
               onToggle={handleToggleType}
               onSelectAll={handleSelectAll}
               onClearAll={handleClearAll}

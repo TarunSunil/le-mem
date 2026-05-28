@@ -41,22 +41,64 @@ export async function POST(request: NextRequest) {
       queryEmbedding = null;
     }
 
-    // Search memories using raw SQL for pgvector
-    // Note: In a real production environment with pgvector, we'd use:
-    // const memories = await prisma.$queryRaw`
-    //   SELECT *, embedding <=> $1::vector AS distance
-    //   FROM "Memory"
-    //   WHERE "userId" = $2
-    //   ORDER BY distance ASC
-    //   LIMIT $3
-    // `;
-    // For now, we'll do a simple text search
+    let memories;
+    if (queryEmbedding) {
+      try {
+        const vector = `[${queryEmbedding.join(",")}]`;
+        const annCandidates = await prisma.$queryRaw<
+          Array<{
+            id: string;
+            content: string;
+            rawInput: string;
+            summary: string | null;
+            tags: string[] | null;
+            createdAt: Date;
+            embedding: string | null;
+            entities: unknown;
+          }>
+        >`
+          SELECT
+            m.id,
+            m.content,
+            m."rawInput",
+            m.summary,
+            m.tags,
+            m."createdAt",
+            m.embedding::text AS embedding,
+            COALESCE(
+              json_agg(json_build_object('entity', json_build_object('name', e.name)))
+                FILTER (WHERE e.id IS NOT NULL),
+              '[]'
+            ) AS entities
+          FROM "Memory" m
+          LEFT JOIN "MemoryEntity" me ON me."memoryId" = m.id
+          LEFT JOIN "Entity" e ON e.id = me."entityId"
+          WHERE m."userId" = ${user.id} AND m.embedding IS NOT NULL
+          GROUP BY m.id, m.content, m."rawInput", m.summary, m.tags, m."createdAt", m.embedding
+          ORDER BY m.embedding <=> ${vector}::vector
+          LIMIT 50
+        `;
 
-    const memories = await prisma.memory.findMany({
+        memories = annCandidates.map((memory) => ({
+          ...memory,
+          embedding: memory.embedding ? JSON.parse(memory.embedding) : null,
+          entities:
+            typeof memory.entities === "string"
+              ? JSON.parse(memory.entities)
+              : Array.isArray(memory.entities)
+                ? memory.entities
+                : [],
+        }));
+      } catch (error) {
+        console.warn("pgvector ANN search failed, falling back to Prisma search:", error);
+      }
+    }
+
+    memories ??= await prisma.memory.findMany({
       where: {
         userId: user.id,
       },
-      take: 250,
+      take: 300,
       include: {
         entities: {
           include: {

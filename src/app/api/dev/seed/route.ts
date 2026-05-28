@@ -3,8 +3,11 @@ import { prisma } from "@/lib/db/prisma";
 
 export async function GET(_req: NextRequest) {
   try {
-    if (process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "Not allowed in production" }, { status: 403 });
+    const configuredSecret = process.env.DEV_SEED_SECRET;
+    const providedSecret = _req.headers.get("x-dev-seed-secret") ?? _req.nextUrl.searchParams.get("secret");
+
+    if (!configuredSecret || providedSecret !== configuredSecret) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const email = process.env.DEV_SEED_EMAIL || "dev@local.test";

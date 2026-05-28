@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isQuestionLike } from "@/lib/memoryHelpers";
 
 export type ChatMode = "store" | "ask";
 
 interface ChatInputProps {
   onSend: (message: string, mode: ChatMode) => void;
   isLoading?: boolean;
+  initialMessage?: string;
 }
 
-export function ChatInput({ onSend, isLoading = false }: ChatInputProps) {
-  const [message, setMessage] = useState("");
+export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: ChatInputProps) {
+  const [message, setMessage] = useState(initialMessage);
   const [mode, setMode] = useState<ChatMode>("store");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -24,7 +26,7 @@ export function ChatInput({ onSend, isLoading = false }: ChatInputProps) {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!message.trim() || isLoading) return;
-    onSend(message, mode);
+    onSend(message, detectedMode);
     setMessage("");
   }
 
@@ -34,7 +36,8 @@ export function ChatInput({ onSend, isLoading = false }: ChatInputProps) {
     }
   };
 
-  const isAsk = mode === "ask";
+  const detectedMode: ChatMode = message.trim() && isQuestionLike(message) ? "ask" : mode;
+  const isAsk = detectedMode === "ask";
 
   return (
     <form onSubmit={handleSubmit} className="fyi-input-panel px-3 py-3 md:px-4 md:py-4">
@@ -94,7 +97,7 @@ export function ChatInput({ onSend, isLoading = false }: ChatInputProps) {
       </div>
 
       <span className="sr-only" aria-live="polite">
-        {isLoading ? "Processing" : `${mode === "ask" ? "Ask" : "Store"} mode ready`}
+        {isLoading ? "Processing" : `${detectedMode === "ask" ? "Ask" : "Store"} mode ready`}
       </span>
     </form>
   );

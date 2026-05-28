@@ -3,12 +3,21 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { GraphData } from "@/types";
+import type { EntityType, GraphData } from "@/types";
 import { NODE_COLORS } from "@/lib/graph/theme";
+import type {
+  ForceGraphMethods,
+  LinkObject,
+  NodeObject,
+} from "react-force-graph-2d";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
-  loading: () => <div className="flex h-full items-center justify-center" style={{ color: "#c5c7c9" }}>Loading graph...</div>,
+  loading: () => (
+    <div className="flex h-full items-center justify-center">
+      <div className="h-24 w-64 animate-pulse rounded-3xl border border-white/10 bg-white/5" />
+    </div>
+  ),
 });
 
 interface KnowledgeGraphProps {
@@ -16,8 +25,17 @@ interface KnowledgeGraphProps {
   isLoading?: boolean;
 }
 
+type ForceGraphNode = NodeObject;
+type ForceGraphLink = LinkObject;
+
+function nodeText(node: ForceGraphNode, field: string): string {
+  const value = node[field];
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
 export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
   const router = useRouter();
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -53,6 +71,7 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
     <div ref={containerRef} className="relative h-full min-h-[320px] overflow-hidden rounded-3xl border border-white/10 bg-black/20 md:min-h-[520px]">
       {dimensions.width > 0 ? (
         <ForceGraph2D
+          ref={graphRef}
           width={dimensions.width}
           height={dimensions.height}
           graphData={graphData}
@@ -60,13 +79,16 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
           nodeRelSize={4}
           nodeLabel="name"
           linkLabel="label"
-          onNodeClick={(node: any) => {
+          d3AlphaDecay={0.05}
+          cooldownTicks={120}
+          onEngineStop={() => graphRef.current?.pauseAnimation()}
+          onNodeClick={(node: ForceGraphNode) => {
             if (node?.id) {
               router.push(`/contexts/${node.id}`);
             }
           }}
           linkCanvasObjectMode={() => "after"}
-          linkCanvasObject={(link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+          linkCanvasObject={(link: ForceGraphLink, ctx: CanvasRenderingContext2D, globalScale: number) => {
             const label = link?.label ? String(link.label) : "";
             if (!label) return;
 
@@ -91,21 +113,24 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
           linkDirectionalParticles={2}
           linkDirectionalParticleSpeed={0.006}
           linkColor={() => "rgba(176,178,255,0.35)"}
-          nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-            const label = node.name;
+          nodeCanvasObject={(node: ForceGraphNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
+            const label = nodeText(node, "name");
+            if (!label || node.x == null || node.y == null) return;
             const baseFont = dimensions.width < 480 ? 10 : 14;
             const fontSize = Math.max(9, baseFont / globalScale);
             ctx.font = `${fontSize}px Sora, sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
 
-            ctx.fillStyle = node.color || NODE_COLORS[node.type as keyof typeof NODE_COLORS] || "#e07a5f";
+            const color = nodeText(node, "color");
+            const type = nodeText(node, "type") as EntityType;
+            ctx.fillStyle = color || NODE_COLORS[type] || "#e07a5f";
             ctx.beginPath();
-            ctx.arc(node.x, node.y, Math.max(4, node.val), 0, 2 * Math.PI, false);
+            ctx.arc(node.x, node.y, Math.max(4, node.val ?? 4), 0, 2 * Math.PI, false);
             ctx.fill();
 
             ctx.fillStyle = "#f4f0ea";
-            ctx.fillText(label, node.x, node.y + Math.max(12, node.val + 10));
+            ctx.fillText(label, node.x, node.y + Math.max(12, (node.val ?? 4) + 10));
           }}
         />
       ) : null}

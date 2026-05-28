@@ -223,14 +223,9 @@ ${memoryContext}`
       },
     });
 
-    let geminiResponse;
+    let geminiResponse: Response | undefined;
     const tryFetch = async (key: string) => {
-      // MOCK TEST: Force 429 on first key to test fallback
-      if (key === process.env.GOOGLE_GEMINI_API_KEY) {
-        return new Response("Simulated quota exhausted", { status: 429 });
-      }
-      
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${key}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${key}`;
       return fetch(geminiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -266,7 +261,43 @@ ${memoryContext}`
             if (!reader) throw new Error("No response body from Gemini");
 
             const decoder = new TextDecoder();
+            const encoder = new TextEncoder();
             let buffer = "";
+
+            const emitTextFromChunk = (chunk: unknown) => {
+              if (!chunk || typeof chunk !== "object") return;
+              const candidates = (chunk as {
+                candidates?: Array<{
+                  content?: { parts?: Array<{ text?: string }> };
+                }>;
+              }).candidates;
+
+              if (!Array.isArray(candidates)) return;
+
+              for (const candidate of candidates) {
+                for (const part of candidate.content?.parts ?? []) {
+                  if (part.text) {
+                    controller.enqueue(encoder.encode(part.text));
+                  }
+                }
+              }
+            };
+
+            const parsePayload = (payloadLine: string) => {
+              const payloadText = payloadLine.trim();
+              if (!payloadText || payloadText === "[DONE]") return;
+
+              try {
+                const parsed = JSON.parse(payloadText);
+                if (Array.isArray(parsed)) {
+                  parsed.forEach(emitTextFromChunk);
+                } else {
+                  emitTextFromChunk(parsed);
+                }
+              } catch (error) {
+                console.warn("Skipping malformed Gemini stream chunk:", error);
+              }
+            };
 
             while (true) {
               const { done, value } = await reader.read();
@@ -274,44 +305,19 @@ ${memoryContext}`
 
               buffer += decoder.decode(value, { stream: true });
 
-              while (buffer.length > 0) {
-                let braceCount = 0;
-                let endIndex = -1;
+              const lines = buffer.split(/\r?\n/);
+              buffer = lines.pop() ?? "";
 
-                for (let i = 0; i < buffer.length; i++) {
-                  if (buffer[i] === "{") braceCount++;
-                  if (buffer[i] === "}") braceCount--;
-                  if (braceCount === 0 && buffer[i] === "}") {
-                    endIndex = i;
-                    break;
-                  }
-                }
-
-                if (endIndex === -1) break;
-
-                const jsonStr = buffer.substring(0, endIndex + 1);
-                buffer = buffer.substring(endIndex + 1).trim();
-
-                const cleanJson = jsonStr.replace(/^[\s,\[\]]+/, "");
-                if (!cleanJson) continue;
-
-                try {
-                  const json = JSON.parse(cleanJson);
-                  if (json.candidates && Array.isArray(json.candidates)) {
-                    for (const candidate of json.candidates) {
-                      if (candidate.content?.parts) {
-                        for (const part of candidate.content.parts) {
-                          if (part.text) {
-                            controller.enqueue(new TextEncoder().encode(part.text));
-                          }
-                        }
-                      }
-                    }
-                  }
-                } catch {
-                  // ignore incomplete JSON chunks
-                }
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+                parsePayload(trimmed.startsWith("data:") ? trimmed.slice(5) : trimmed);
               }
+            }
+
+            const tail = buffer.trim();
+            if (tail) {
+              parsePayload(tail.startsWith("data:") ? tail.slice(5) : tail);
             }
 
             controller.close();

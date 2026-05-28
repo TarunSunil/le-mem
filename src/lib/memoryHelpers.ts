@@ -70,15 +70,17 @@ export function isQuestionLike(text?: string): boolean {
 
 export function makeMemoryTitle(
   text?: string,
-  maxWords = 16,
-  maxChars = 120
+  maxWords = 24,
+  maxChars = 180
 ): string {
   if (!text) return "Memory";
   const cleaned = text.trim().replace(/\s+/g, " ");
   let base = cleaned;
 
   const firstStop = cleaned.search(/[.!?]/);
-  if (firstStop > 0 && firstStop < maxChars) {
+  const firstSentenceWordCount =
+    firstStop > 0 ? cleaned.slice(0, firstStop).split(" ").length : 0;
+  if (firstStop > 0 && firstStop < maxChars && firstSentenceWordCount >= 8) {
     base = cleaned.slice(0, firstStop + 1);
   }
 

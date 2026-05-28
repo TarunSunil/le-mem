@@ -2,6 +2,7 @@ import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "../../../lib/db/prisma";
 import { isQuestionLike } from "@/lib/memoryHelpers";
 import { type Session } from "next-auth";
+import { TimelineActions } from "./TimelineActions";
 
 interface Memory {
   id: string;
@@ -19,10 +20,12 @@ interface GroupedMemories {
 }
 
 function TimelineItem({
+  id,
   type = "note_add",
   title,
   summary,
 }: {
+  id: string;
   type?: string;
   title: string;
   summary: string;
@@ -57,6 +60,8 @@ function TimelineItem({
       <p className="mt-3 text-xs leading-5 md:mt-4 md:text-body-md md:leading-7" style={{ color: "var(--fyi-muted)" }}>
         {summary}
       </p>
+
+      <TimelineActions id={id} content={summary} />
     </article>
   );
 }
@@ -170,6 +175,7 @@ export async function TimelineContent() {
                   {items.map((item, index) => (
                     <TimelineItem
                       key={`${item.id}-${index}`}
+                      id={item.id}
                       type={item.type || "memory"}
                       title={item.title || item.content.substring(0, 50)}
                       summary={item.content}

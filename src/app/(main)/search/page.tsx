@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface SearchResult {
   id?: string;
@@ -16,6 +16,15 @@ interface SearchResults {
   people: SearchResult[];
   snippets: SearchResult[];
   projects: SearchResult[];
+}
+
+interface ApiSearchResult {
+  id?: string;
+  name?: string;
+  title?: string;
+  summary?: string;
+  content?: string;
+  type?: string;
 }
 
 function ResultCard({ title, summary }: { title: string; summary: string }) {
@@ -41,21 +50,15 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Debounce search API calls
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (query.trim()) {
-        searchMemories(query);
-      } else {
-        setResults({ people: [], snippets: [], projects: [] });
-        setError(null);
-      }
-    }, 300);
+  const searchMemories = useCallback(async (searchQuery: string, signal?: AbortSignal) => {
+    const trimmedQuery = searchQuery.trim();
+    if (trimmedQuery.length < 3) {
+      setResults({ people: [], snippets: [], projects: [] });
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
 
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  const searchMemories = async (searchQuery: string) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -64,7 +67,8 @@ export default function SearchPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: searchQuery, limit: 10 }),
+        body: JSON.stringify({ query: trimmedQuery, limit: 10 }),
+        signal,
       });
 
       if (!response.ok) {
@@ -79,7 +83,7 @@ export default function SearchPage() {
             const text = await response.text();
             if (text.trim()) errorMessage = `${errorMessage}: ${text}`;
           }
-        } catch (e) {
+        } catch {
           // ignore parsing errors
         }
 
@@ -93,19 +97,19 @@ export default function SearchPage() {
       const snippets: SearchResult[] = [];
       const projects: SearchResult[] = [];
 
-      (data.results || []).forEach((result: any) => {
+      ((data.results || []) as ApiSearchResult[]).forEach((result) => {
         if (result.type === "PERSON") {
           people.push({
             id: result.id,
             name: result.name,
-            summary: result.summary || result.name,
+            summary: result.summary || result.name || "Person",
             type: result.type,
           });
         } else if (result.type === "PROJECT") {
           projects.push({
             id: result.id,
             title: result.name,
-            summary: result.summary || result.name,
+            summary: result.summary || result.name || "Project",
             type: result.type,
           });
         } else {
@@ -120,13 +124,27 @@ export default function SearchPage() {
 
       setResults({ people, snippets, projects });
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Search failed");
       console.error("Search error:", err);
       setResults({ people: [], snippets: [], projects: [] });
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Debounce search API calls and cancel stale requests.
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void searchMemories(query, controller.signal);
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, searchMemories]);
 
   const isEmpty =
     !isLoading &&
@@ -162,7 +180,7 @@ export default function SearchPage() {
               />
               <button
                 type="button"
-                disabled={isLoading}
+                disabled={isLoading || query.trim().length < 3}
                 onClick={() => searchMemories(query)}
                 className="rounded-full bg-secondary-container px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-on-secondary-container transition-opacity hover:opacity-90 disabled:opacity-50 md:px-4 md:py-2 md:text-label-sm md:tracking-normal"
               >

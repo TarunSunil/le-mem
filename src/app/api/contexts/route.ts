@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
 
+type ContextItem = {
+  id: string;
+  label: string;
+  title: string;
+  summary: string;
+  accent: string;
+};
+
+type ContextGroup = {
+  id: string;
+  title: string;
+  contexts: ContextItem[];
+};
+
 export async function GET(_req: NextRequest) {
   try {
     const session = await getCachedSession();
@@ -17,10 +31,10 @@ export async function GET(_req: NextRequest) {
     const entities = await prisma.entity.findMany({ where: { userId: user.id } });
 
     // Group entities by type for simple context pages
-    const groups: Array<{ id: string; title: string; contexts: any[] }> = [];
+    const groups: ContextGroup[] = [];
 
     if (entities.length > 0) {
-      const byType: Record<string, any[]> = {};
+      const byType: Record<string, ContextItem[]> = {};
       for (const e of entities) {
         if (!byType[e.type]) byType[e.type] = [];
         byType[e.type].push({
@@ -51,7 +65,7 @@ export async function GET(_req: NextRequest) {
     }
 
     // Group by tag (first tag) or create a default "Memories" group
-    const tagGroups: Record<string, any[]> = {};
+    const tagGroups: Record<string, ContextItem[]> = {};
     for (const m of memories) {
       const tag = (m.tags && m.tags[0]) || "Memories";
       if (!tagGroups[tag]) tagGroups[tag] = [];

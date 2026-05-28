@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     const created: Array<{ memoryId: string; entitiesFound: unknown[] }> = [];
 
-    for (const fact of usableFacts) {
+    await Promise.all(usableFacts.map(async (fact) => {
       const embedding = embeddingMap.get(fact.text) ?? [];
       const extractedData = {
         people: fact.entities?.people ?? [],
@@ -343,7 +343,7 @@ export async function POST(request: NextRequest) {
         memoryId: memory.id,
         entitiesFound: entitiesFound.map((me: (typeof entitiesFound)[number]) => me.entity),
       });
-    }
+    }));
 
     if (created.length === 0) {
       const reason = isQuestionLike(content) ? "question-like" : "no-durable-facts";

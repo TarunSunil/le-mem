@@ -61,7 +61,7 @@ const loadGroupsCached = unstable_cache(
     if (memories.length === 0) return [];
 
     // Filter out question-like rows (we don't surface questions as contexts)
-    const realMemories = memories.filter((m) => !isQuestionLike((m as any).rawInput || m.content));
+    const realMemories = memories.filter((m) => !isQuestionLike(m.rawInput || m.content));
 
     const tagGroups: Record<string, ContextCard[]> = {};
     for (const m of realMemories) {
@@ -138,6 +138,22 @@ export default async function ContextsPage() {
             <p className="mt-2 text-xs leading-5 md:mt-3 md:text-body-md" style={{ color: "var(--fyi-muted)" }}>
               Add memories in chat and FYI will automatically build context pages as it learns.
             </p>
+            <div className="mx-auto mt-5 flex max-w-2xl flex-wrap justify-center gap-2">
+              {[
+                "I'm a software engineer at [company]",
+                "My hobbies include...",
+                "I'm working on a project called...",
+              ].map((prompt) => (
+                <Link
+                  key={prompt}
+                  href={`/chat?prefill=${encodeURIComponent(prompt)}`}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs transition-colors hover:border-white/20 hover:bg-white/10 md:text-sm"
+                  style={{ color: "var(--fyi-accent-soft)" }}
+                >
+                  {prompt}
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 

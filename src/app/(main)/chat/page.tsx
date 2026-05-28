@@ -3,6 +3,7 @@
 import { ChatInput, type ChatMode } from "@/components/chat/ChatInput";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 
 interface Message {
@@ -12,11 +13,16 @@ interface Message {
   mode?: ChatMode;
 }
 
+const MAX_STORED_MESSAGES = 50;
+
 export default function ChatPage() {
   const { data: session, status } = useSession();
+  const searchParams = useSearchParams();
+  const prefill = searchParams.get("prefill") ?? "";
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const storageKeyRef = useRef<string | null>(null);
 
@@ -24,7 +30,7 @@ export default function ChatPage() {
     if (status === "unauthenticated") {
       if (storageKeyRef.current) sessionStorage.removeItem(storageKeyRef.current);
       storageKeyRef.current = null;
-      setMessages([]);
+      queueMicrotask(() => setMessages([]));
       return;
     }
 
@@ -33,17 +39,21 @@ export default function ChatPage() {
       storageKeyRef.current = key;
       try {
         const stored = sessionStorage.getItem(key);
-        setMessages(stored ? (JSON.parse(stored) as Message[]) : []);
+        const nextMessages = stored ? (JSON.parse(stored) as Message[]) : [];
+        queueMicrotask(() => setMessages(nextMessages));
       } catch {
         sessionStorage.removeItem(key);
-        setMessages([]);
+        queueMicrotask(() => setMessages([]));
       }
     }
   }, [session?.user?.email, status]);
 
   useEffect(() => {
     if (!storageKeyRef.current) return;
-    sessionStorage.setItem(storageKeyRef.current, JSON.stringify(messages));
+    sessionStorage.setItem(
+      storageKeyRef.current,
+      JSON.stringify(messages.slice(-MAX_STORED_MESSAGES))
+    );
   }, [messages]);
 
   useEffect(() => {
@@ -61,6 +71,7 @@ export default function ChatPage() {
     const userMessage: Message = { role: "user", content, mode };
     setMessages((prev) => [...prev, userMessage]);
     setError(null);
+    setSaveStatus(null);
     setIsLoading(true);
 
     try {
@@ -88,6 +99,11 @@ export default function ChatPage() {
           }
           throw new Error(errMsg);
         }
+
+        const memoryBody = await memRes.json();
+        setSaveStatus(
+          memoryBody?.skipped ? "No durable memory saved" : "Memory saved"
+        );
       }
 
       const chatRes = await fetch("/api/chat", {
@@ -145,6 +161,7 @@ export default function ChatPage() {
       console.error("Chat error:", err);
     } finally {
       setIsLoading(false);
+      window.setTimeout(() => setSaveStatus(null), 2600);
     }
   };
 
@@ -204,6 +221,16 @@ export default function ChatPage() {
                 Error: {error}
               </div>
             )}
+
+            {saveStatus && (
+              <div
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs"
+                style={{ color: "var(--fyi-accent-soft)" }}
+              >
+                <span className="material-symbols-outlined text-base">check_circle</span>
+                {saveStatus}
+              </div>
+            )}
           </section>
 
           <div ref={messagesEndRef} />
@@ -212,7 +239,7 @@ export default function ChatPage() {
 
       <div className="input-gradient mt-auto border-t border-white/5 px-4 pb-3 pt-4 md:px-container-padding md:pb-6 md:pt-5">
         <div className="mx-auto w-full max-w-4xl">
-          <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
+          <ChatInput onSend={handleSendMessage} isLoading={isLoading} initialMessage={prefill} />
         </div>
       </div>
     </div>
