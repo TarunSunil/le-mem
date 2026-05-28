@@ -128,16 +128,14 @@ export async function POST(req: NextRequest) {
           });
 
           let queryEmbedding: number[] | null = null;
-          if (parsedMemories.length > 20) {
-            try {
-              const emb = await embedText(latestUserMsg);
-              if (emb && emb.length > 0) queryEmbedding = emb;
-            } catch (e) {
-              console.warn("Embedding generation skipped:", e);
-            }
+          try {
+            const emb = await embedText(latestUserMsg);
+            if (emb && emb.length > 0) queryEmbedding = emb;
+          } catch (e) {
+            console.warn("Embedding generation skipped:", e);
           }
 
-          const topK = mode === "ask" ? 10 : 5;
+          const topK = mode === "ask" ? 20 : 5;
           const matches = rankMemoriesForQuery(
             latestUserMsg,
             parsedMemories,

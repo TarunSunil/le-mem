@@ -363,6 +363,16 @@ export function rankMemoriesForQuery(
         }
       }
 
+      // City/Geographic proximity matching
+      const cityMatch = query.match(/\b(bangalore|bengaluru|mumbai|delhi|Chennai|Hyderabad|Pune|Kolkata|etc)\b/i);
+      if (cityMatch) {
+        const city = cityMatch[1].toLowerCase();
+        if (searchableParts.includes(`near ${city}`) || 
+            searchableParts.includes(city)) {
+          score += 2;
+        }
+      }
+
       // Semantic similarity
       if (queryEmbedding && memory.embedding) {
         score += cosineSimilarity(queryEmbedding, memory.embedding) * 4;
