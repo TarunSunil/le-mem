@@ -62,40 +62,101 @@ export async function POST(req: NextRequest) {
         });
 
         if (user) {
-          const rawMemories = await prisma.$queryRaw<
-            Array<{
-              id: string;
-              content: string;
-              rawInput: string;
-              summary: string | null;
-              tags: string[] | null;
-              createdAt: Date;
-              embedding: string | null;
-              entities: unknown;
-            }>
-          >`
-            SELECT
-              m.id,
-              m.content,
-              m."rawInput",
-              m.summary,
-              m.tags,
-              m."createdAt",
-              m.embedding::text AS embedding,
-              COALESCE(
-                json_agg(
-                  json_build_object('entity', json_build_object('name', e.name))
-                ) FILTER (WHERE e.id IS NOT NULL),
-                '[]'
-              ) AS entities
-            FROM "Memory" m
-            LEFT JOIN "MemoryEntity" me ON me."memoryId" = m.id
-            LEFT JOIN "Entity" e ON e.id = me."entityId"
-            WHERE m."userId" = ${user.id}
-            GROUP BY m.id, m.content, m."rawInput", m.summary, m.tags, m."createdAt", m.embedding
-            ORDER BY m."createdAt" DESC
-            LIMIT 300
-          `;
+          let queryEmbedding: number[] | null = null;
+          try {
+            const emb = await embedText(latestUserMsg);
+            if (emb && emb.length > 0) queryEmbedding = emb;
+          } catch (e) {
+            console.warn("Embedding generation skipped:", e);
+          }
+
+          let rawMemories: Array<{
+            id: string;
+            content: string;
+            rawInput: string;
+            summary: string | null;
+            tags: string[] | null;
+            createdAt: Date;
+            embedding: string | null;
+            entities: unknown;
+          }> = [];
+
+          if (queryEmbedding) {
+            const vectorStr = `[${queryEmbedding.join(",")}]`;
+            rawMemories = await prisma.$queryRaw<
+              Array<{
+                id: string;
+                content: string;
+                rawInput: string;
+                summary: string | null;
+                tags: string[] | null;
+                createdAt: Date;
+                embedding: string | null;
+                entities: unknown;
+              }>
+            >`
+              SELECT
+                m.id,
+                m.content,
+                m."rawInput",
+                m.summary,
+                m.tags,
+                m."createdAt",
+                m.embedding::text AS embedding,
+                COALESCE(
+                  json_agg(
+                    json_build_object('entity', json_build_object('name', e.name))
+                  ) FILTER (WHERE e.id IS NOT NULL),
+                  '[]'
+                ) AS entities
+              FROM "Memory" m
+              LEFT JOIN "MemoryEntity" me ON me."memoryId" = m.id
+              LEFT JOIN "Entity" e ON e.id = me."entityId"
+              WHERE m."userId" = ${user.id}
+              GROUP BY m.id, m.content, m."rawInput", m.summary, m.tags, m."createdAt", m.embedding
+              ORDER BY
+                CASE
+                  WHEN m.embedding IS NOT NULL THEN m.embedding <=> ${vectorStr}::vector
+                  ELSE 1.0
+                END
+              LIMIT 50
+            `;
+          } else {
+            rawMemories = await prisma.$queryRaw<
+              Array<{
+                id: string;
+                content: string;
+                rawInput: string;
+                summary: string | null;
+                tags: string[] | null;
+                createdAt: Date;
+                embedding: string | null;
+                entities: unknown;
+              }>
+            >`
+              SELECT
+                m.id,
+                m.content,
+                m."rawInput",
+                m.summary,
+                m.tags,
+                m."createdAt",
+                m.embedding::text AS embedding,
+                COALESCE(
+                  json_agg(
+                    json_build_object('entity', json_build_object('name', e.name))
+                  ) FILTER (WHERE e.id IS NOT NULL),
+                  '[]'
+                ) AS entities
+              FROM "Memory" m
+              LEFT JOIN "MemoryEntity" me ON me."memoryId" = m.id
+              LEFT JOIN "Entity" e ON e.id = me."entityId"
+              WHERE m."userId" = ${user.id}
+              GROUP BY m.id, m.content, m."rawInput", m.summary, m.tags, m."createdAt", m.embedding
+              ORDER BY m."createdAt" DESC
+              LIMIT 300
+            `;
+          }
 
           const parsedMemories = rawMemories.map((memory) => {
             let parsedEntities: Array<{ entity?: { name?: string | null } | null }> = [];
@@ -126,14 +187,6 @@ export async function POST(req: NextRequest) {
               entities: parsedEntities,
             };
           });
-
-          let queryEmbedding: number[] | null = null;
-          try {
-            const emb = await embedText(latestUserMsg);
-            if (emb && emb.length > 0) queryEmbedding = emb;
-          } catch (e) {
-            console.warn("Embedding generation skipped:", e);
-          }
 
           const topK = mode === "ask" ? 20 : 5;
           const matches = rankMemoriesForQuery(
