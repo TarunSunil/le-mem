@@ -1,9 +1,8 @@
 // src/app/api/memory/ingest/route.ts
 import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
-import { embedText } from "@/lib/ai/embed";
-import { extractEntities } from "@/lib/ai/extract-entities";
-import { splitFacts } from "@/lib/ai/split-facts";
+import { embedMultiple } from "@/lib/ai/embed";
+import { ingestPipeline } from "@/lib/ai/ingest-pipeline";
 import { isQuestionLike, makeMemoryTitle } from "@/lib/memoryHelpers";
 import { ContentType } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
@@ -43,29 +42,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const atomicFacts = await splitFacts(content);
-    const dedupedFacts = Array.from(new Set(atomicFacts.map((fact) => fact.trim()))).filter(Boolean);
+    const pipeline = await ingestPipeline(content);
+    const normalizedFacts = pipeline.facts
+      .map((fact) => ({
+        ...fact,
+        text: String(fact.text || "").replace(/\s+/g, " ").trim(),
+      }))
+      .filter((fact) => fact.text.length > 0);
 
-    if (dedupedFacts.length === 0) {
+    const seen = new Set<string>();
+    const dedupedFacts = normalizedFacts.filter((fact) => {
+      const key = fact.text.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    const usableFacts = dedupedFacts.filter((fact) => !isQuestionLike(fact.text));
+
+    if (usableFacts.length === 0) {
       const reason = isQuestionLike(content) ? "question-like" : "no-durable-facts";
       return NextResponse.json({ skipped: true, reason });
     }
 
+    const needsEmbedding = (text: string) => text.length > 40;
+    const factsToEmbed = usableFacts.filter((fact) => needsEmbedding(fact.text));
+    const embeddings = await embedMultiple(factsToEmbed.map((fact) => fact.text));
+    const embeddingMap = new Map<string, number[]>();
+
+    factsToEmbed.forEach((fact, index) => {
+      const embedding = embeddings[index] || [];
+      if (embedding.length > 0) {
+        embeddingMap.set(fact.text, embedding);
+      }
+    });
+
     const created: Array<{ memoryId: string; entitiesFound: unknown[] }> = [];
 
-    for (const fact of dedupedFacts) {
-      if (isQuestionLike(fact)) {
-        continue;
-      }
+    for (const fact of usableFacts) {
+      const embedding = embeddingMap.get(fact.text) ?? [];
+      const extractedData = {
+        people: fact.entities?.people ?? [],
+        organizations: fact.entities?.organizations ?? [],
+        places: fact.entities?.places ?? [],
+        projects: fact.entities?.projects ?? [],
+        topics: fact.entities?.topics ?? [],
+        events: fact.entities?.events ?? [],
+        relationships: fact.entities?.relationships ?? [],
+      };
 
-      // 1. Generate embedding (best-effort)
-      const embedding = await embedText(fact);
-
-      // 2. Extract entities
-      const extractedData = await extractEntities(fact);
-
-      // If extraction returned nothing (e.g., no extraction model configured),
-      // create a fallback topic entity from the content so contexts/graph show up.
       const totalExtracted =
         extractedData.people.length +
         extractedData.organizations.length +
@@ -75,21 +100,25 @@ export async function POST(request: NextRequest) {
         extractedData.events.length;
 
       if (totalExtracted === 0) {
-        const fallbackName = (fact || "").trim().split("\n")[0].slice(0, 80) || "Note";
-        extractedData.topics.push({ name: fallbackName });
+        const fallbackName = (fact.fallbackTopic || "").trim();
+        if (fallbackName && fallbackName.length <= 60) {
+          extractedData.topics.push({ name: fallbackName });
+        }
       }
 
-      // 3. Create memory record with a concise `summary` used for titles/previews
+      const memoryDate = fact.date ? new Date(fact.date) : undefined;
+
       const memory = await prisma.memory.create({
         data: {
           userId: user.id,
-          content: fact,
-          rawInput: fact,
-          summary: makeMemoryTitle(fact),
+          content: fact.text,
+          rawInput: fact.text,
+          summary: makeMemoryTitle(fact.text),
           contentType: contentType as ContentType,
           fileUrl,
           sourceUrl,
           tags: extractedData.topics.map((t) => t.name),
+          createdAt: memoryDate,
         },
       });
 
@@ -115,7 +144,7 @@ export async function POST(request: NextRequest) {
             },
           },
           update: {
-            summary: person.context || undefined,
+            summary: person.context ? makeMemoryTitle(person.context) : undefined,
             attributes: {
               relationship: person.relationship,
             },
@@ -124,7 +153,7 @@ export async function POST(request: NextRequest) {
             userId: user.id,
             name: person.name,
             type: "PERSON",
-            summary: person.context,
+            summary: person.context ? makeMemoryTitle(person.context) : undefined,
             attributes: {
               relationship: person.relationship,
             },

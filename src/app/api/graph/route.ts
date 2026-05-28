@@ -3,28 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
 import { GraphData, EntityType } from "@/types";
-
-const NODE_COLORS: Record<EntityType, string> = {
-  PERSON: "#e07a5f",
-  PROJECT: "#2a9d8f",
-  ORGANIZATION: "#f2cc8f",
-  PLACE: "#b7b0a6",
-  TRAVEL: "#f2cc8f",
-  HEALTH: "#e07a5f",
-  TOPIC: "#6f665a",
-  EVENT: "#f2cc8f",
-};
-
-const NODE_SIZE: Record<EntityType, number> = {
-  PERSON: 8,
-  PROJECT: 10,
-  TOPIC: 5,
-  ORGANIZATION: 7,
-  PLACE: 6,
-  TRAVEL: 6,
-  HEALTH: 6,
-  EVENT: 5,
-};
+import { NODE_COLORS, NODE_SIZE } from "@/lib/graph/theme";
 
 export async function GET(request: NextRequest) {
   try {

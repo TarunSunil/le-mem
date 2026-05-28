@@ -1,15 +1,11 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { KnowledgeGraph } from "@/components/graph/KnowledgeGraph";
+import { GraphFilters } from "@/components/graph/GraphFilters";
 import useSWR from "swr";
-import type { GraphData } from "@/types";
-
-const LEGEND = [
-  ["People", "#e07a5f"],
-  ["Projects", "#2a9d8f"],
-  ["Travel", "#f2cc8f"],
-  ["Topics", "#6f665a"],
-];
+import type { GraphData, EntityType } from "@/types";
+import { ENTITY_LABELS, ENTITY_TYPE_ORDER, NODE_COLORS } from "@/lib/graph/theme";
 
 export default function GraphPage() {
   const fetcher = async (url: string) => {
@@ -27,6 +23,60 @@ export default function GraphPage() {
 
   const nodeCount = graphData?.nodes.length || 0;
   const linkCount = graphData?.links.length || 0;
+  const didInitRef = useRef(false);
+  const [activeTypes, setActiveTypes] = useState<EntityType[]>([]);
+
+  const availableTypes = useMemo(() => {
+    if (!graphData?.nodes?.length) return [];
+    const types = new Set<EntityType>();
+    for (const node of graphData.nodes) {
+      if (node.type) types.add(node.type as EntityType);
+    }
+    return ENTITY_TYPE_ORDER.filter((type) => types.has(type));
+  }, [graphData]);
+
+  useEffect(() => {
+    if (didInitRef.current) return;
+    if (availableTypes.length > 0) {
+      setActiveTypes(availableTypes);
+      didInitRef.current = true;
+    }
+  }, [availableTypes]);
+
+  const filteredData = useMemo(() => {
+    if (!graphData) return undefined;
+    if (!didInitRef.current) return graphData;
+    if (activeTypes.length === 0) return { nodes: [], links: [] };
+
+    const nodes = graphData.nodes.filter((node) => activeTypes.includes(node.type));
+    const nodeIds = new Set(nodes.map((node) => node.id));
+    const links = graphData.links.filter((link) => {
+      const sourceId = typeof link.source === "object" ? (link.source as any).id : link.source;
+      const targetId = typeof link.target === "object" ? (link.target as any).id : link.target;
+      return nodeIds.has(sourceId) && nodeIds.has(targetId);
+    });
+
+    return { nodes, links };
+  }, [graphData, activeTypes]);
+
+  const legendItems = useMemo(
+    () => availableTypes.map((type) => [ENTITY_LABELS[type], NODE_COLORS[type]] as const),
+    [availableTypes]
+  );
+
+  const handleToggleType = (type: EntityType) => {
+    setActiveTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
+  const handleSelectAll = () => {
+    setActiveTypes(availableTypes);
+  };
+
+  const handleClearAll = () => {
+    setActiveTypes([]);
+  };
 
   return (
     <div className="flex min-h-full flex-col px-4 py-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:px-container-padding md:py-6">
@@ -69,7 +119,7 @@ export default function GraphPage() {
             </div>
           )}
 
-          {!error && <KnowledgeGraph data={graphData || undefined} isLoading={isLoading} />}
+          {!error && <KnowledgeGraph data={filteredData || undefined} isLoading={isLoading} />}
 
           <aside className="rounded-3xl border border-white/10 bg-white/5 p-4 md:p-5">
             <h2
@@ -80,7 +130,7 @@ export default function GraphPage() {
             </h2>
 
             <div className="mt-4 space-y-2 md:mt-5 md:space-y-3">
-              {LEGEND.map(([label, color]) => (
+              {legendItems.map(([label, color]) => (
                 <div
                   key={label}
                   className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 md:gap-3 md:px-4 md:py-3"
@@ -96,6 +146,14 @@ export default function GraphPage() {
               ))}
             </div>
 
+            <GraphFilters
+              availableTypes={availableTypes}
+              activeTypes={activeTypes}
+              onToggle={handleToggleType}
+              onSelectAll={handleSelectAll}
+              onClearAll={handleClearAll}
+            />
+
             <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3 md:mt-6 md:p-4">
               <p
                 className="text-[10px] uppercase tracking-[0.22em] md:text-label-sm"
@@ -107,8 +165,7 @@ export default function GraphPage() {
                 className="mt-2 text-xs leading-5 md:mt-3 md:text-body-md md:leading-7"
                 style={{ color: "var(--fyi-muted)" }}
               >
-                Clickable nodes will open the related context page once live data
-                is connected to the graph API.
+                Click a node to open its related context page.
               </p>
             </div>
           </aside>

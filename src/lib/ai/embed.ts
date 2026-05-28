@@ -1,8 +1,6 @@
 // src/lib/ai/embed.ts
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+import { withGeminiFallback } from "./gemini-fallback";
 
 // Pad to 1536 because Prisma Schema is hardcoded to vector(1536)
 function padTo1536(vector: number[]): number[] {
@@ -15,13 +13,15 @@ function padTo1536(vector: number[]): number[] {
 
 export async function embedText(text: string): Promise<number[]> {
   try {
-    if (!genAI || !text.trim()) {
+    if (!text.trim()) {
       return [];
     }
 
-    const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
-    const result = await model.embedContent(text);
-    return padTo1536(result.embedding.values);
+    return await withGeminiFallback(async (genAI) => {
+      const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+      const result = await model.embedContent(text);
+      return padTo1536(result.embedding.values);
+    });
   } catch (error) {
     console.error("Embedding failed:", error);
     return [];
@@ -30,14 +30,16 @@ export async function embedText(text: string): Promise<number[]> {
 
 export async function embedMultiple(texts: string[]): Promise<number[][]> {
   try {
-    if (!genAI || texts.length === 0) {
-      return texts.map(() => []);
+    if (texts.length === 0) {
+      return [];
     }
 
-    const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
-    const batchRequests = texts.map(t => ({ content: { parts: [{ text: t }], role: "user" } }));
-    const result = await model.batchEmbedContents({ requests: batchRequests });
-    return result.embeddings.map(e => padTo1536(e.values));
+    return await withGeminiFallback(async (genAI) => {
+      const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+      const batchRequests = texts.map(t => ({ content: { parts: [{ text: t }], role: "user" } }));
+      const result = await model.batchEmbedContents({ requests: batchRequests });
+      return result.embeddings.map(e => padTo1536(e.values));
+    });
   } catch (error) {
     console.error("Batch embedding failed:", error);
     return texts.map(() => []);

@@ -4,7 +4,7 @@ import { type Session } from "next-auth";
 import { unstable_cache } from "next/cache";
 import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "../../../lib/db/prisma";
-import { isQuestionLike, humanizeEntityType } from "@/lib/memoryHelpers";
+import { isQuestionLike, humanizeEntityType, makeMemoryTitle } from "@/lib/memoryHelpers";
 
 export const revalidate = 60;
 
@@ -31,13 +31,17 @@ const loadGroupsCached = unstable_cache(
 
     if (entities.length > 0) {
       const byType: Record<string, ContextCard[]> = {};
-      for (const e of entities) {
+      const filteredEntities = entities.filter(
+        (e) => !(e.type === "TOPIC" && e.name.length > 60)
+      );
+      for (const e of filteredEntities) {
         if (!byType[e.type]) byType[e.type] = [];
+        const summaryText = e.summary ? makeMemoryTitle(e.summary) : "";
         byType[e.type].push({
           id: e.id,
           label: humanizeEntityType(e.type),
-          title: e.summary ? e.summary : e.name,
-          summary: e.summary || "",
+          title: summaryText || e.name,
+          summary: summaryText,
           accent: "#e07a5f",
         });
       }
@@ -66,8 +70,8 @@ const loadGroupsCached = unstable_cache(
       tagGroups[tag].push({
         id: `mem-${m.id}`,
         label: tag,
-        title: m.summary ? m.summary.slice(0, 60) : m.content.slice(0, 60),
-        summary: m.summary || m.content.slice(0, 200),
+        title: makeMemoryTitle(m.summary || m.content, 12, 60),
+        summary: m.summary ? makeMemoryTitle(m.summary, 24, 200) : m.content.slice(0, 200),
         accent: "#2a9d8f",
       });
     }

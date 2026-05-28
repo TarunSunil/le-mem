@@ -2,23 +2,14 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { GraphData, EntityType } from "@/types";
+import { useRouter } from "next/navigation";
+import type { GraphData } from "@/types";
+import { NODE_COLORS } from "@/lib/graph/theme";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
   loading: () => <div className="flex h-full items-center justify-center" style={{ color: "#c5c7c9" }}>Loading graph...</div>,
 });
-
-const NODE_COLORS: Record<EntityType, string> = {
-  PERSON: "#e07a5f",
-  PLACE: "#b7b0a6",
-  PROJECT: "#2a9d8f",
-  EVENT: "#f2cc8f",
-  HEALTH: "#e07a5f",
-  TRAVEL: "#f2cc8f",
-  TOPIC: "#6f665a",
-  ORGANIZATION: "#f2cc8f",
-};
 
 interface KnowledgeGraphProps {
   data?: GraphData;
@@ -27,6 +18,7 @@ interface KnowledgeGraphProps {
 
 export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -68,6 +60,34 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
           nodeRelSize={4}
           nodeLabel="name"
           linkLabel="label"
+          onNodeClick={(node: any) => {
+            if (node?.id) {
+              router.push(`/contexts/${node.id}`);
+            }
+          }}
+          linkCanvasObjectMode={() => "after"}
+          linkCanvasObject={(link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+            const label = link?.label ? String(link.label) : "";
+            if (!label) return;
+
+            const start = link.source;
+            const end = link.target;
+            if (!start || !end) return;
+            const startX = typeof start === "object" ? start.x : null;
+            const startY = typeof start === "object" ? start.y : null;
+            const endX = typeof end === "object" ? end.x : null;
+            const endY = typeof end === "object" ? end.y : null;
+            if (startX == null || startY == null || endX == null || endY == null) return;
+
+            const x = (startX + endX) / 2;
+            const y = (startY + endY) / 2;
+            const fontSize = Math.max(8, 12 / globalScale);
+            ctx.font = `${fontSize}px Sora, sans-serif`;
+            ctx.fillStyle = "rgba(244, 240, 234, 0.85)";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(label, x, y);
+          }}
           linkDirectionalParticles={2}
           linkDirectionalParticleSpeed={0.006}
           linkColor={() => "rgba(176,178,255,0.35)"}
@@ -79,7 +99,7 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
 
-            ctx.fillStyle = node.color || "#e07a5f";
+            ctx.fillStyle = node.color || NODE_COLORS[node.type as keyof typeof NODE_COLORS] || "#e07a5f";
             ctx.beginPath();
             ctx.arc(node.x, node.y, Math.max(4, node.val), 0, 2 * Math.PI, false);
             ctx.fill();

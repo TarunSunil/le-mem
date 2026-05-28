@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!process.env.GOOGLE_GEMINI_API_KEY) {
+    if (!process.env.GOOGLE_GEMINI_API_KEY && !process.env.GOOGLE_GEMINI_API_KEY_2) {
       return NextResponse.json(
         {
           error:
@@ -62,56 +62,85 @@ export async function POST(req: NextRequest) {
         });
 
         if (user) {
-          let queryEmbedding: number[] | null = null;
-          try {
-            const emb = await embedText(latestUserMsg);
-            if (emb && emb.length > 0) queryEmbedding = emb;
-          } catch (e) {
-            console.warn("Embedding generation skipped:", e);
-          }
+          const rawMemories = await prisma.$queryRaw<
+            Array<{
+              id: string;
+              content: string;
+              rawInput: string;
+              summary: string | null;
+              tags: string[] | null;
+              createdAt: Date;
+              embedding: string | null;
+              entities: unknown;
+            }>
+          >`
+            SELECT
+              m.id,
+              m.content,
+              m."rawInput",
+              m.summary,
+              m.tags,
+              m."createdAt",
+              m.embedding::text AS embedding,
+              COALESCE(
+                json_agg(
+                  json_build_object('entity', json_build_object('name', e.name))
+                ) FILTER (WHERE e.id IS NOT NULL),
+                '[]'
+              ) AS entities
+            FROM "Memory" m
+            LEFT JOIN "MemoryEntity" me ON me."memoryId" = m.id
+            LEFT JOIN "Entity" e ON e.id = me."entityId"
+            WHERE m."userId" = ${user.id}
+            GROUP BY m.id, m.content, m."rawInput", m.summary, m.tags, m."createdAt", m.embedding
+            ORDER BY m."createdAt" DESC
+            LIMIT 300
+          `;
 
-          const memories = await prisma.memory.findMany({
-            where: { userId: user.id },
-            orderBy: { createdAt: "desc" },
-            take: 300,
-            include: {
-              entities: { include: { entity: true } },
-            },
+          const parsedMemories = rawMemories.map((memory) => {
+            let parsedEntities: Array<{ entity?: { name?: string | null } | null }> = [];
+            if (Array.isArray(memory.entities)) {
+              parsedEntities = memory.entities as Array<{ entity?: { name?: string | null } | null }>;
+            } else if (typeof memory.entities === "string") {
+              try {
+                parsedEntities = JSON.parse(memory.entities) as Array<{
+                  entity?: { name?: string | null } | null;
+                }>;
+              } catch {
+                parsedEntities = [];
+              }
+            }
+
+            let parsedEmbedding: number[] | null = null;
+            if (memory.embedding) {
+              try {
+                parsedEmbedding = JSON.parse(memory.embedding);
+              } catch {
+                parsedEmbedding = null;
+              }
+            }
+
+            return {
+              ...memory,
+              embedding: parsedEmbedding,
+              entities: parsedEntities,
+            };
           });
 
-          if (memories.length > 0 && queryEmbedding) {
+          let queryEmbedding: number[] | null = null;
+          if (parsedMemories.length > 20) {
             try {
-              const rawRows = await prisma.$queryRaw<
-                Array<{ id: string; embedding: string | null }>
-              >`
-                SELECT id, embedding::text AS embedding
-                FROM "Memory"
-                WHERE "userId" = ${user.id}
-                  AND embedding IS NOT NULL
-              `;
-
-              const embMap = new Map<string, number[]>();
-              for (const row of rawRows) {
-                if (row.embedding) {
-                  try {
-                    embMap.set(row.id, JSON.parse(row.embedding));
-                  } catch {
-                    // ignore
-                  }
-                }
-              }
-              for (const m of memories) {
-                (m as any).embedding = embMap.get(m.id) ?? null;
-              }
+              const emb = await embedText(latestUserMsg);
+              if (emb && emb.length > 0) queryEmbedding = emb;
             } catch (e) {
-              console.warn("Could not load embeddings:", e);
+              console.warn("Embedding generation skipped:", e);
             }
           }
 
           const topK = mode === "ask" ? 10 : 5;
           const matches = rankMemoriesForQuery(
             latestUserMsg,
-            memories,
+            parsedMemories,
             queryEmbedding,
             topK
           );
@@ -130,8 +159,8 @@ export async function POST(req: NextRequest) {
                 return `- ${prefix}${m.summary || m.content.slice(0, 300)}`;
               })
               .join("\n");
-          } else if (memories.length > 0) {
-            memoryContext = memories
+          } else if (parsedMemories.length > 0) {
+            memoryContext = parsedMemories
               .slice(0, 5)
               .map((m) => `- ${m.summary || m.content.slice(0, 300)}`)
               .join("\n");
@@ -175,27 +204,57 @@ ${memoryContext}`
       parts: [{ text: msg.content }],
     }));
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${process.env.GOOGLE_GEMINI_API_KEY}`;
+    const key1 = process.env.GOOGLE_GEMINI_API_KEY;
+    const key2 = process.env.GOOGLE_GEMINI_API_KEY_2;
+    
+    if (!key1 && !key2) {
+      return NextResponse.json(
+        { error: "No Google Gemini API key configured." },
+        { status: 503 }
+      );
+    }
 
-    const geminiResponse = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        generation_config: {
-          temperature: mode === "ask" ? 0.2 : 0.5,
-          max_output_tokens: mode === "ask" ? 1024 : 256,
-        },
-      }),
+    const payload = JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents,
+      generation_config: {
+        temperature: mode === "ask" ? 0.2 : 0.5,
+        max_output_tokens: mode === "ask" ? 1024 : 256,
+      },
     });
 
-    if (!geminiResponse.ok) {
-      const errorBody = await geminiResponse.text();
-      console.error("Gemini API error:", geminiResponse.status, errorBody);
+    let geminiResponse;
+    const tryFetch = async (key: string) => {
+      // MOCK TEST: Force 429 on first key to test fallback
+      if (key === process.env.GOOGLE_GEMINI_API_KEY) {
+        return new Response("Simulated quota exhausted", { status: 429 });
+      }
+      
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${key}`;
+      return fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      });
+    };
+
+    if (key1) {
+      geminiResponse = await tryFetch(key1);
+      if (geminiResponse.status === 429 && key2) {
+        console.warn("First API key hit quota, switching to second key...");
+        geminiResponse = await tryFetch(key2);
+      }
+    } else if (key2) {
+      geminiResponse = await tryFetch(key2);
+    }
+
+    if (!geminiResponse || !geminiResponse.ok) {
+      const errorBody = await geminiResponse?.text() || "Unknown error";
+      const status = geminiResponse?.status || 500;
+      console.error("Gemini API error:", status, errorBody);
       return NextResponse.json(
-        { error: `Gemini API error (${geminiResponse.status}): ${errorBody}` },
-        { status: geminiResponse.status }
+        { error: `Gemini API error (${status}): ${errorBody}` },
+        { status }
       );
     }
 

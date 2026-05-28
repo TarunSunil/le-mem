@@ -1,9 +1,7 @@
 // src/lib/ai/extract-entities.ts
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ExtractedEntities } from "@/types";
-
-const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
-const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+import { withGeminiFallback } from "./gemini-fallback";
 
 const EXTRACTION_PROMPT = `You are an entity extraction engine for a personal memory OS.
 
@@ -30,42 +28,32 @@ export async function extractEntities(
   text: string
 ): Promise<ExtractedEntities> {
   try {
-    if (!genAI) {
+    return await withGeminiFallback(async (genAI) => {
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text }] }],
+        systemInstruction: EXTRACTION_PROMPT,
+        generationConfig: {
+          temperature: 0.3,
+        },
+      });
+
+      let content = result.response.text();
+      // Clean up potential markdown formatting
+      content = content.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+      const parsed = JSON.parse(content);
+
       return {
-        people: [],
-        organizations: [],
-        places: [],
-        projects: [],
-        topics: [],
-        events: [],
-        relationships: [],
+        people: parsed.people || [],
+        organizations: parsed.organizations || [],
+        places: parsed.places || [],
+        projects: parsed.projects || [],
+        topics: parsed.topics || [],
+        events: parsed.events || [],
+        relationships: parsed.relationships || [],
       };
-    }
-
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text }] }],
-      systemInstruction: EXTRACTION_PROMPT,
-      generationConfig: {
-        temperature: 0.3,
-      },
     });
-
-    let content = result.response.text();
-    // Clean up potential markdown formatting
-    content = content.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
-    const parsed = JSON.parse(content);
-
-    return {
-      people: parsed.people || [],
-      organizations: parsed.organizations || [],
-      places: parsed.places || [],
-      projects: parsed.projects || [],
-      topics: parsed.topics || [],
-      events: parsed.events || [],
-      relationships: parsed.relationships || [],
-    };
   } catch (error) {
     console.error("Entity extraction failed:", error);
     return {
