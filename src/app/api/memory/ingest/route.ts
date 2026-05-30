@@ -5,6 +5,8 @@ import { embedMultiple } from "@/lib/ai/embed";
 import { ingestPipeline } from "@/lib/ai/ingest-pipeline";
 import { isQuestionLike, makeMemoryTitle } from "@/lib/memoryHelpers";
 import { ContentType } from "@/types";
+import { apiError } from "@/lib/api-error";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -18,7 +20,11 @@ export async function POST(request: NextRequest) {
 
     const session = await getCachedSession();
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError("Unauthorized", 401);
+    }
+
+    if (!checkRateLimit(`ingest:${session.user.email}`)) {
+      return apiError("Too many requests. Please wait a moment.", 429);
     }
 
     let user = await prisma.user.findUnique({
@@ -35,11 +41,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (!content) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    if (!content || typeof content !== "string") {
+      return apiError("Missing content", 400);
+    }
+
+    if (content.length > 10_000) {
+      return apiError("Content too long (max 10,000 chars)", 413);
     }
 
     const pipeline = await ingestPipeline(content);
@@ -65,7 +72,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ skipped: true, reason });
     }
 
-    const needsEmbedding = (text: string) => text.length > 40;
+    const needsEmbedding = (text: string) => text.length > 80;
     const factsToEmbed = usableFacts.filter((fact) => needsEmbedding(fact.text));
     const embeddings = await embedMultiple(factsToEmbed.map((fact) => fact.text));
     const embeddingMap = new Map<string, number[]>();
@@ -356,9 +363,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Memory ingestion failed:", error);
-    return NextResponse.json(
-      { error: "Memory ingestion failed", details: String(error) },
-      { status: 500 }
-    );
+    return apiError("Memory ingestion failed", 500, String(error));
   }
 }

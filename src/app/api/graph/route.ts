@@ -4,13 +4,14 @@ import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
 import { GraphData, EntityType } from "@/types";
 import { NODE_COLORS, NODE_SIZE } from "@/lib/graph/theme";
+import { apiError } from "@/lib/api-error";
 
 export async function GET(request: NextRequest) {
   try {
     // Check authentication
     const session = await getCachedSession();
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError("Unauthorized", 401);
     }
 
     // Get user from database
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError("User not found", 404);
     }
 
     const userId = user.id;
@@ -36,9 +37,11 @@ export async function GET(request: NextRequest) {
           userId,
         },
       },
-      include: {
-        fromEntity: true,
-        toEntity: true,
+      select: {
+        fromEntityId: true,
+        toEntityId: true,
+        label: true,
+        strength: true,
       },
     });
 
@@ -70,9 +73,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Graph generation failed:", error);
-    return NextResponse.json(
-      { error: "Failed to generate graph" },
-      { status: 500 }
-    );
+    return apiError("Failed to generate graph", 500, String(error));
   }
 }

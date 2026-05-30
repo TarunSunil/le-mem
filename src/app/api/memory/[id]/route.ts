@@ -2,14 +2,16 @@ import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
 import { makeMemoryTitle } from "@/lib/memoryHelpers";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError } from "@/lib/api-error";
 
 async function getOwnedMemory(id: string, email: string) {
-  return prisma.memory.findFirst({
-    where: {
-      id,
-      user: { email },
-    },
-  });
+  const memory = await prisma.memory.findUnique({ where: { id } });
+  if (!memory) return null;
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || memory.userId !== user.id) return null;
+
+  return memory;
 }
 
 export async function PATCH(
@@ -18,19 +20,20 @@ export async function PATCH(
 ) {
   const session = await getCachedSession();
   if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const { id } = await context.params;
   const existing = await getOwnedMemory(id, session.user.email);
   if (!existing) {
-    return NextResponse.json({ error: "Memory not found" }, { status: 404 });
+    return apiError("Memory not found", 404);
   }
 
   const body = (await request.json()) as {
     content?: string;
     summary?: string | null;
     tags?: string[];
+    pinned?: boolean;
   };
   const content = body.content?.trim();
 
@@ -45,6 +48,7 @@ export async function PATCH(
           }
         : {}),
       ...(Array.isArray(body.tags) ? { tags: body.tags } : {}),
+      ...(typeof body.pinned === "boolean" ? { pinned: body.pinned } : {}),
     },
   });
 
@@ -57,13 +61,13 @@ export async function DELETE(
 ) {
   const session = await getCachedSession();
   if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError("Unauthorized", 401);
   }
 
   const { id } = await context.params;
   const existing = await getOwnedMemory(id, session.user.email);
   if (!existing) {
-    return NextResponse.json({ error: "Memory not found" }, { status: 404 });
+    return apiError("Memory not found", 404);
   }
 
   await prisma.memory.delete({ where: { id } });

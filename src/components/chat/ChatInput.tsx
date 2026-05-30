@@ -14,7 +14,10 @@ interface ChatInputProps {
 export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: ChatInputProps) {
   const [message, setMessage] = useState(initialMessage);
   const [mode, setMode] = useState<ChatMode>("store");
+  const [isPending, setIsPending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const lastInputAtRef = useRef<number>(Date.now());
+  const pendingTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -23,15 +26,40 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
     textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
   }, [message]);
 
+  useEffect(() => () => {
+    if (pendingTimeoutRef.current) {
+      window.clearTimeout(pendingTimeoutRef.current);
+    }
+  }, []);
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!message.trim() || isLoading) return;
-    onSend(message, detectedMode);
+    if (!message.trim() || isLoading || isPending) return;
+
+    const nextMessage = message;
+    const nextMode = detectedMode;
+
+    const delay =
+      nextMode === "store"
+        ? Math.max(0, 1500 - (Date.now() - lastInputAtRef.current))
+        : 0;
+
+    if (delay > 0) {
+      setIsPending(true);
+      pendingTimeoutRef.current = window.setTimeout(() => {
+        onSend(nextMessage, nextMode);
+        setIsPending(false);
+        pendingTimeoutRef.current = null;
+      }, delay);
+    } else {
+      onSend(nextMessage, nextMode);
+    }
+
     setMessage("");
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && e.ctrlKey && !isLoading) {
+    if (e.key === "Enter" && e.ctrlKey && !isLoading && !isPending) {
       handleSubmit(e as unknown as React.FormEvent);
     }
   };
@@ -41,41 +69,64 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
 
   return (
     <form onSubmit={handleSubmit} className="fyi-input-panel px-3 py-3 md:px-4 md:py-4">
-      <div className="flex items-center gap-2 md:gap-3">
-        <button
-          type="button"
-          onClick={() => setMode(isAsk ? "store" : "ask")}
-          className="flex h-9 w-9 items-center justify-center rounded-full transition-colors md:h-10 md:w-10"
-          style={{
-            backgroundColor: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            color: isAsk ? "var(--fyi-accent-2)" : "var(--fyi-accent)",
-          }}
-          aria-label={isAsk ? "Switch to store mode" : "Switch to ask mode"}
+      <div className="flex flex-wrap items-center gap-2 md:gap-3">
+        <div
+          className="flex items-center rounded-full border border-white/10 bg-white/5 p-1"
+          role="tablist"
+          aria-label="Chat mode"
         >
-          <span className="material-symbols-outlined text-lg md:text-xl">
-            {isAsk ? "manage_search" : "save"}
-          </span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setMode("store")}
+            className={
+              "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] transition-colors md:text-label-sm md:tracking-normal " +
+              (detectedMode === "store" ? "bg-white/10" : "opacity-70 hover:opacity-100")
+            }
+            aria-pressed={detectedMode === "store"}
+            aria-label="Switch to Store mode — statements will be saved"
+            style={{ color: "var(--fyi-accent)" }}
+          >
+            <span className="material-symbols-outlined text-base">save</span>
+            Store
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("ask")}
+            className={
+              "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] transition-colors md:text-label-sm md:tracking-normal " +
+              (detectedMode === "ask" ? "bg-white/10" : "opacity-70 hover:opacity-100")
+            }
+            aria-pressed={detectedMode === "ask"}
+            aria-label="Switch to Ask mode — questions will not be stored"
+            style={{ color: "var(--fyi-accent-2)" }}
+          >
+            <span className="material-symbols-outlined text-base">manage_search</span>
+            Ask
+          </button>
+        </div>
 
         <textarea
           ref={textareaRef}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) => {
+            lastInputAtRef.current = Date.now();
+            setMessage(e.target.value);
+          }}
           onKeyDown={handleKeyDown}
           rows={1}
-          disabled={isLoading}
+          disabled={isLoading || isPending}
           placeholder={
             isAsk
               ? "Ask anything about your memories..."
               : "Describe a memory, paste a note, add a fact..."
           }
           className="max-h-36 w-full flex-1 resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-on-surface-variant disabled:opacity-50 md:max-h-40 md:text-body-md md:leading-7"
+          aria-label="Memory input"
         />
 
         <button
           type="submit"
-          disabled={!message.trim() || isLoading}
+          disabled={!message.trim() || isLoading || isPending}
           aria-label="Send message"
           className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 md:h-11 md:w-11"
           style={
@@ -91,13 +142,15 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
           }
         >
           <span className="material-symbols-outlined text-lg md:text-xl">
-            {isLoading ? "hourglass_empty" : "send"}
+            {isLoading || isPending ? "hourglass_empty" : "send"}
           </span>
         </button>
       </div>
 
       <span className="sr-only" aria-live="polite">
-        {isLoading ? "Processing" : `${detectedMode === "ask" ? "Ask" : "Store"} mode ready`}
+        {isLoading || isPending
+          ? "Processing"
+          : `${detectedMode === "ask" ? "Ask" : "Store"} mode ready`}
       </span>
     </form>
   );

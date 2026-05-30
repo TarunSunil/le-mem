@@ -5,15 +5,18 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
+import { useToast } from "@/components/ui/Toast";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   contexts?: string[];
   mode?: ChatMode;
+  createdAt?: number;
 }
 
 const MAX_STORED_MESSAGES = 50;
+const HISTORY_TTL_MS = 8 * 60 * 60 * 1000;
 
 export default function ChatPage() {
   const { data: session, status } = useSession();
@@ -21,10 +24,9 @@ export default function ChatPage() {
   const prefill = searchParams.get("prefill") ?? "";
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const storageKeyRef = useRef<string | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -39,8 +41,25 @@ export default function ChatPage() {
       storageKeyRef.current = key;
       try {
         const stored = sessionStorage.getItem(key);
-        const nextMessages = stored ? (JSON.parse(stored) as Message[]) : [];
-        queueMicrotask(() => setMessages(nextMessages));
+        const parsed = stored ? JSON.parse(stored) : null;
+        if (Array.isArray(parsed)) {
+          queueMicrotask(() => setMessages(parsed));
+          return;
+        }
+
+        const payload = parsed as { messages?: Message[]; ts?: number } | null;
+        if (!payload?.messages || !payload.ts) {
+          queueMicrotask(() => setMessages([]));
+          return;
+        }
+
+        if (Date.now() - payload.ts > HISTORY_TTL_MS) {
+          sessionStorage.removeItem(key);
+          queueMicrotask(() => setMessages([]));
+          return;
+        }
+
+        queueMicrotask(() => setMessages(payload.messages));
       } catch {
         sessionStorage.removeItem(key);
         queueMicrotask(() => setMessages([]));
@@ -52,7 +71,10 @@ export default function ChatPage() {
     if (!storageKeyRef.current) return;
     sessionStorage.setItem(
       storageKeyRef.current,
-      JSON.stringify(messages.slice(-MAX_STORED_MESSAGES))
+      JSON.stringify({
+        ts: Date.now(),
+        messages: messages.slice(-MAX_STORED_MESSAGES),
+      })
     );
   }, [messages]);
 
@@ -64,14 +86,12 @@ export default function ChatPage() {
     if (!content.trim()) return;
 
     if (status !== "authenticated" || !session?.user?.email) {
-      setError("Please sign in to send messages.");
+      addToast("Please sign in to send messages.", "error");
       return;
     }
 
-    const userMessage: Message = { role: "user", content, mode };
+    const userMessage: Message = { role: "user", content, mode, createdAt: Date.now() };
     setMessages((prev) => [...prev, userMessage]);
-    setError(null);
-    setSaveStatus(null);
     setIsLoading(true);
 
     try {
@@ -101,8 +121,9 @@ export default function ChatPage() {
         }
 
         const memoryBody = await memRes.json();
-        setSaveStatus(
-          memoryBody?.skipped ? "No durable memory saved" : "Memory saved"
+        addToast(
+          memoryBody?.skipped ? "No durable memory saved" : "Memory saved",
+          memoryBody?.skipped ? "info" : "success"
         );
       }
 
@@ -151,17 +172,16 @@ export default function ChatPage() {
           if (last && last.role === "assistant") {
             last.content = assistantContent;
           } else {
-            updated.push({ role: "assistant", content: assistantContent });
+            updated.push({ role: "assistant", content: assistantContent, createdAt: Date.now() });
           }
           return updated;
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      addToast(err instanceof Error ? err.message : "An error occurred", "error");
       console.error("Chat error:", err);
     } finally {
       setIsLoading(false);
-      window.setTimeout(() => setSaveStatus(null), 2600);
     }
   };
 
@@ -210,27 +230,9 @@ export default function ChatPage() {
                 content={message.content}
                 contexts={message.contexts}
                 mode={message.mode}
+                createdAt={message.createdAt}
               />
             ))}
-
-            {error && (
-              <div
-                className="rounded-lg border border-red-500 bg-red-500/10 p-4 text-sm"
-                style={{ color: "#ff6b6b" }}
-              >
-                Error: {error}
-              </div>
-            )}
-
-            {saveStatus && (
-              <div
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs"
-                style={{ color: "var(--fyi-accent-soft)" }}
-              >
-                <span className="material-symbols-outlined text-base">check_circle</span>
-                {saveStatus}
-              </div>
-            )}
           </section>
 
           <div ref={messagesEndRef} />

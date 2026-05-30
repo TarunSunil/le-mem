@@ -2,7 +2,8 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { localFuzzySearch } from "@/lib/clientSearch";
 
 interface SearchResult {
   id?: string;
@@ -47,8 +48,49 @@ export default function SearchPage() {
     snippets: [],
     projects: [],
   });
+  const [recentContexts, setRecentContexts] = useState<Array<{ id: string; label: string }>>([]);
+  const [entityStats, setEntityStats] = useState<Record<string, number>>({});
+  const [cachedMemories, setCachedMemories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("le-mem:recent-contexts");
+      const parsed = stored ? (JSON.parse(stored) as Array<{ id: string; label: string }>) : [];
+      if (Array.isArray(parsed)) setRecentContexts(parsed.slice(0, 5));
+    } catch {
+      setRecentContexts([]);
+    }
+
+    try {
+      const stored = sessionStorage.getItem("le-mem:search-cache");
+      const parsed = stored ? (JSON.parse(stored) as string[]) : [];
+      if (Array.isArray(parsed)) setCachedMemories(parsed);
+    } catch {
+      setCachedMemories([]);
+    }
+  }, [cachedMemories]);
+
+  useEffect(() => {
+    const loadEntityStats = async () => {
+      try {
+        const response = await fetch("/api/graph", { credentials: "include" });
+        if (!response.ok) return;
+        const data = (await response.json()) as { nodes?: Array<{ type?: string }> };
+        const counts: Record<string, number> = {};
+        for (const node of data.nodes ?? []) {
+          if (!node.type) continue;
+          counts[node.type] = (counts[node.type] || 0) + 1;
+        }
+        setEntityStats(counts);
+      } catch {
+        setEntityStats({});
+      }
+    };
+
+    void loadEntityStats();
+  }, []);
 
   const searchMemories = useCallback(async (searchQuery: string, signal?: AbortSignal) => {
     const trimmedQuery = searchQuery.trim();
@@ -123,10 +165,31 @@ export default function SearchPage() {
       });
 
       setResults({ people, snippets, projects });
+      const memoryTitles = snippets
+        .map((item) => item.title || item.summary)
+        .filter((value): value is string => Boolean(value));
+      if (memoryTitles.length > 0) {
+        setCachedMemories(memoryTitles);
+        sessionStorage.setItem("le-mem:search-cache", JSON.stringify(memoryTitles));
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Search failed");
       console.error("Search error:", err);
+      const fallback = localFuzzySearch(trimmedQuery, cachedMemories);
+      if (fallback.length > 0) {
+        setResults({
+          people: [],
+          projects: [],
+          snippets: fallback.map((title, index) => ({
+            id: `fallback-${index}`,
+            title,
+            summary: title,
+            type: "MEMORY",
+          })),
+        });
+        return;
+      }
       setResults({ people: [], snippets: [], projects: [] });
     } finally {
       if (!signal?.aborted) setIsLoading(false);
@@ -145,6 +208,15 @@ export default function SearchPage() {
       controller.abort();
     };
   }, [query, searchMemories]);
+
+  const entitySummary = useMemo(() => {
+    const entries = Object.entries(entityStats);
+    if (entries.length === 0) return [];
+    return entries
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([type, count]) => `${count} ${type.toLowerCase()}`);
+  }, [entityStats]);
 
   const isEmpty =
     !isLoading &&
@@ -200,13 +272,69 @@ export default function SearchPage() {
         </section>
 
         {isEmpty && !query.trim() && (
-          <section className="mt-4 rounded-3xl border border-dashed border-white/10 bg-white/5 p-6 text-center md:mt-6 md:p-8">
-            <h2 className="text-xl font-newsreader md:text-headline-md" style={{ color: "var(--fyi-text)" }}>
-              Search your memory timeline
-            </h2>
-            <p className="mt-2 text-xs leading-5 md:mt-3 md:text-body-md" style={{ color: "var(--fyi-muted)" }}>
-              Start by entering a topic, person, or project. FYI will surface related memories as you add them.
-            </p>
+          <section className="mt-4 grid gap-4 md:mt-6 md:grid-cols-3">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <p className="text-[10px] uppercase tracking-[0.24em]" style={{ color: "var(--fyi-accent)" }}>
+                Recently viewed
+              </p>
+              <div className="mt-3 space-y-2">
+                {recentContexts.length === 0 ? (
+                  <p className="text-xs leading-5" style={{ color: "var(--fyi-muted)" }}>
+                    No recent contexts yet. Open a context page to pin it here.
+                  </p>
+                ) : (
+                  recentContexts.map((context) => (
+                    <button
+                      key={context.id}
+                      type="button"
+                      onClick={() => setQuery(context.label)}
+                      className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-left text-xs transition hover:border-white/20"
+                      style={{ color: "var(--fyi-text)" }}
+                    >
+                      {context.label}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <p className="text-[10px] uppercase tracking-[0.24em]" style={{ color: "var(--fyi-accent)" }}>
+                Entity mix
+              </p>
+              <div className="mt-3 space-y-2">
+                {entitySummary.length === 0 ? (
+                  <p className="text-xs leading-5" style={{ color: "var(--fyi-muted)" }}>
+                    No entities detected yet. Store a few memories to see your mix.
+                  </p>
+                ) : (
+                  entitySummary.map((item) => (
+                    <div key={item} className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs" style={{ color: "var(--fyi-text)" }}>
+                      {item}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <p className="text-[10px] uppercase tracking-[0.24em]" style={{ color: "var(--fyi-accent)" }}>
+                Quick searches
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {["people", "projects", "travel", "health", "recent"].map((term) => (
+                  <button
+                    key={term}
+                    type="button"
+                    onClick={() => setQuery(term)}
+                    className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[11px] uppercase tracking-[0.2em] transition hover:border-white/20"
+                    style={{ color: "var(--fyi-muted)" }}
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
           </section>
         )}
 

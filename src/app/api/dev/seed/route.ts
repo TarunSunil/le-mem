@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { apiError } from "@/lib/api-error";
 
-export async function GET(_req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
+    if (process.env.NODE_ENV !== "development") {
+      return apiError("Not found", 404);
+    }
+
     const configuredSecret = process.env.DEV_SEED_SECRET;
-    const providedSecret = _req.headers.get("x-dev-seed-secret") ?? _req.nextUrl.searchParams.get("secret");
+    const providedSecret = req.headers.get("x-dev-seed-secret");
 
     if (!configuredSecret || providedSecret !== configuredSecret) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return apiError("Forbidden", 403);
     }
 
     const email = process.env.DEV_SEED_EMAIL || "dev@local.test";
@@ -54,6 +59,6 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ success: true, user: { email: user.email }, entities: [alice.id, acme.id, project.id] });
   } catch (error) {
     console.error("Dev seed failed:", error);
-    return NextResponse.json({ error: "Seed failed" }, { status: 500 });
+    return apiError("Seed failed", 500, String(error));
   }
 }

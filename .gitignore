@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# prototype HTML screens (never deploy)
+Mem/stitch_personal_context_operating_system/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/graph", icon: "share", label: "Graph" },
   { href: "/timeline", icon: "schedule", label: "Timeline" },
   { href: "/search", icon: "search", label: "Search" },
+  { href: "/insights", icon: "bar_chart", label: "Insights" },
 ];
 
 export function BottomNav() {
@@ -25,7 +26,7 @@ export function BottomNav() {
             key={item.href}
             href={item.href}
             prefetch={true}
-            className="flex flex-col items-center justify-center w-14 h-14 rounded-lg gap-0.5 transition-colors"
+            className="flex flex-col items-center justify-center w-16 h-14 rounded-lg gap-0.5 transition-colors"
             style={{
               color: isActive ? "var(--fyi-accent-soft)" : "var(--fyi-muted)",
               backgroundColor: isActive ? "var(--fyi-accent-strong)" : "transparent",
@@ -34,7 +35,9 @@ export function BottomNav() {
             <span className="material-symbols-outlined text-base">
               {item.icon}
             </span>
-            <span className="text-[10px] uppercase tracking-[0.16em]">{item.label}</span>
+            <span className="max-w-[60px] truncate text-[9px] uppercase tracking-[0.14em] leading-none">
+              {item.label}
+            </span>
           </Link>
         );
       })}

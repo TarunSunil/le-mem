@@ -3,6 +3,8 @@ import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
 import { embedText } from "@/lib/ai/embed";
 import { rankMemoriesForQuery, tokenizeSearchText } from "@/lib/memoryHelpers";
+import { apiError } from "@/lib/api-error";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -11,7 +13,11 @@ export async function POST(request: NextRequest) {
 
     const session = await getCachedSession();
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError("Unauthorized", 401);
+    }
+
+    if (!checkRateLimit(`search:${session.user.email}`)) {
+      return apiError("Too many requests. Please wait a moment.", 429);
     }
 
     const user = await prisma.user.findUnique({
@@ -19,14 +25,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError("User not found", 404);
     }
 
-    if (!query) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    if (!query || typeof query !== "string") {
+      return apiError("Missing required fields", 400);
     }
 
     // Generate embedding for query (optional). If embedding generation fails
@@ -164,9 +167,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Search failed:", error);
-    return NextResponse.json(
-      { error: "Search failed", details: String(error) },
-      { status: 500 }
-    );
+    return apiError("Search failed", 500, String(error));
   }
 }

@@ -35,6 +35,7 @@ export interface Memory {
   embedding?: number[];
   summary?: string;
   tags: string[];
+  pinned?: boolean;
   fileUrl?: string;
   sourceUrl?: string;
   createdAt: Date;

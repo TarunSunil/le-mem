@@ -30,6 +30,7 @@ model Memory {
   embedding   Unsupported("vector(1536)")?
   summary     String?
   tags        String[]
+  pinned      Boolean     @default(false)
   fileUrl     String?
   sourceUrl   String?
   createdAt   DateTime    @default(now())

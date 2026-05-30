@@ -24,67 +24,69 @@ type ContextGroup = {
   contexts: ContextCard[];
 };
 
-const loadGroupsCached = unstable_cache(
-  async (userId: string): Promise<ContextGroup[]> => {
-    const entities = await prisma.entity.findMany({ where: { userId } });
-    const groups: ContextGroup[] = [];
+async function loadGroupsCached(userId: string): Promise<ContextGroup[]> {
+  return unstable_cache(
+    async () => {
+      const entities = await prisma.entity.findMany({ where: { userId } });
+      const groups: ContextGroup[] = [];
 
-    if (entities.length > 0) {
-      const byType: Record<string, ContextCard[]> = {};
-      const filteredEntities = entities.filter(
-        (e) => !(e.type === "TOPIC" && e.name.length > 60)
-      );
-      for (const e of filteredEntities) {
-        if (!byType[e.type]) byType[e.type] = [];
-        const summaryText = e.summary ? makeMemoryTitle(e.summary) : "";
-        byType[e.type].push({
-          id: e.id,
-          label: humanizeEntityType(e.type),
-          title: summaryText || e.name,
-          summary: summaryText,
-          accent: "#e07a5f",
+      if (entities.length > 0) {
+        const byType: Record<string, ContextCard[]> = {};
+        const filteredEntities = entities.filter(
+          (e) => !(e.type === "TOPIC" && e.name.length > 60)
+        );
+        for (const e of filteredEntities) {
+          if (!byType[e.type]) byType[e.type] = [];
+          const summaryText = e.summary ? makeMemoryTitle(e.summary) : "";
+          byType[e.type].push({
+            id: e.id,
+            label: humanizeEntityType(e.type),
+            title: summaryText || e.name,
+            summary: summaryText,
+            accent: "#e07a5f",
+          });
+        }
+
+        for (const [type, items] of Object.entries(byType)) {
+          groups.push({ id: type, title: humanizeEntityType(type), contexts: items });
+        }
+
+        return groups;
+      }
+
+      const memories = await prisma.memory.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      });
+      if (memories.length === 0) return [];
+
+      // Filter out question-like rows (we don't surface questions as contexts)
+      const realMemories = memories.filter((m) => !isQuestionLike(m.rawInput || m.content));
+
+      const tagGroups: Record<string, ContextCard[]> = {};
+      for (const m of realMemories) {
+        const tag = (m.tags && m.tags[0]) || "Memories";
+        if (!tagGroups[tag]) tagGroups[tag] = [];
+        tagGroups[tag].push({
+          id: `mem-${m.id}`,
+          label: tag,
+          title: makeMemoryTitle(m.summary || m.content, 12, 60),
+          summary: m.summary ? makeMemoryTitle(m.summary, 24, 200) : m.content.slice(0, 200),
+          accent: "#2a9d8f",
         });
       }
 
-      for (const [type, items] of Object.entries(byType)) {
-        groups.push({ id: type, title: humanizeEntityType(type), contexts: items });
+      for (const [tag, items] of Object.entries(tagGroups)) {
+        groups.push({ id: `tag-${tag}`, title: tag, contexts: items });
       }
 
       return groups;
-    }
-
-    const memories = await prisma.memory.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
-    if (memories.length === 0) return [];
-
-    // Filter out question-like rows (we don't surface questions as contexts)
-    const realMemories = memories.filter((m) => !isQuestionLike(m.rawInput || m.content));
-
-    const tagGroups: Record<string, ContextCard[]> = {};
-    for (const m of realMemories) {
-      const tag = (m.tags && m.tags[0]) || "Memories";
-      if (!tagGroups[tag]) tagGroups[tag] = [];
-      tagGroups[tag].push({
-        id: `mem-${m.id}`,
-        label: tag,
-        title: makeMemoryTitle(m.summary || m.content, 12, 60),
-        summary: m.summary ? makeMemoryTitle(m.summary, 24, 200) : m.content.slice(0, 200),
-        accent: "#2a9d8f",
-      });
-    }
-
-    for (const [tag, items] of Object.entries(tagGroups)) {
-      groups.push({ id: `tag-${tag}`, title: tag, contexts: items });
-    }
-
-    return groups;
-  },
-  ["context-groups"],
-  { revalidate: 30 }
-);
+    },
+    [`context-groups-${userId}`],
+    { revalidate: 30, tags: [`user-contexts-${userId}`] }
+  )();
+}
 
 async function loadGroups(): Promise<ContextGroup[]> {
   const session = (await getCachedSession()) as Session | null;
@@ -132,13 +134,14 @@ export default async function ContextsPage() {
 
         {groups.length === 0 && (
           <div className="mt-8 rounded-3xl border border-dashed border-white/10 bg-white/5 p-6 text-center md:mt-10 md:p-10">
+            <div className="mx-auto mb-5 h-20 w-20 animate-[pulse_4s_ease-in-out_infinite] rounded-full bg-gradient-to-br from-[#e07a5f] via-[#2a9d8f] to-transparent opacity-70 blur-[2px] shadow-[0_0_40px_rgba(224,122,95,0.35)]" />
             <h2 className="text-xl font-newsreader md:text-headline-md" style={{ color: "var(--fyi-text)" }}>
-              No contexts yet
+              Your memory is a blank canvas.
             </h2>
             <p className="mt-2 text-xs leading-5 md:mt-3 md:text-body-md" style={{ color: "var(--fyi-muted)" }}>
-              Add memories in chat and FYI will automatically build context pages as it learns.
+              Start a conversation in chat and FYI will begin composing a calm, structured context space around you.
             </p>
-            <div className="mx-auto mt-5 flex max-w-2xl flex-wrap justify-center gap-2">
+            <div className="mx-auto mt-5 flex flex-wrap justify-center gap-2">
               {[
                 "I'm a software engineer at [company]",
                 "My hobbies include...",
@@ -154,6 +157,13 @@ export default async function ContextsPage() {
                 </Link>
               ))}
             </div>
+            <Link
+              href="/chat"
+              className="mx-auto mt-5 inline-flex items-center justify-center rounded-full border border-white/10 bg-white/10 px-5 py-2 text-xs uppercase tracking-[0.2em] transition hover:bg-white/15 md:text-label-sm"
+              style={{ color: "var(--fyi-text)" }}
+            >
+              Start your first memory
+            </Link>
           </div>
         )}
 

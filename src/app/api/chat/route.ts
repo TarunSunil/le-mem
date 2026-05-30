@@ -4,6 +4,8 @@ import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
 import { embedText } from "@/lib/ai/embed";
 import { rankMemoriesForQuery } from "@/lib/memoryHelpers";
+import { apiError } from "@/lib/api-error";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -11,18 +13,12 @@ export async function POST(req: NextRequest) {
     const session = await getCachedSession();
     if (!session?.user?.email) {
       if (!authOptions.providers.length) {
-        return NextResponse.json(
-          {
-            error:
-              "Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, then restart the app.",
-          },
-          { status: 503 }
+        return apiError(
+          "Google sign-in is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, then restart the app.",
+          503
         );
       }
-      return NextResponse.json(
-        { error: "No active session found. Please sign in again." },
-        { status: 401 }
-      );
+      return apiError("No active session found. Please sign in again.", 401);
     }
 
     const body = (await req.json()) as {
@@ -33,20 +29,22 @@ export async function POST(req: NextRequest) {
     const { messages, mode = "store" } = body;
 
     if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json(
-        { error: "Invalid request body: 'messages' must be an array." },
-        { status: 400 }
-      );
+      return apiError("Invalid request body: 'messages' must be an array.", 400);
+    }
+
+    if (messages.length > 50) {
+      return apiError("Invalid messages array (max 50 messages)", 400);
     }
 
     if (!process.env.GOOGLE_GEMINI_API_KEY && !process.env.GOOGLE_GEMINI_API_KEY_2) {
-      return NextResponse.json(
-        {
-          error:
-            "Google Gemini API key is not configured. Add GOOGLE_GEMINI_API_KEY to .env.local and restart the server.",
-        },
-        { status: 503 }
+      return apiError(
+        "Google Gemini API key is not configured. Add GOOGLE_GEMINI_API_KEY to .env.local and restart the server.",
+        503
       );
+    }
+
+    if (!checkRateLimit(`chat:${session.user.email}`)) {
+      return apiError("Too many requests. Please wait a moment.", 429);
     }
 
     let memoryContext = "";
@@ -259,10 +257,7 @@ ${memoryContext}`
     const key2 = process.env.GOOGLE_GEMINI_API_KEY_2;
     
     if (!key1 && !key2) {
-      return NextResponse.json(
-        { error: "No Google Gemini API key configured." },
-        { status: 503 }
-      );
+      return apiError("No Google Gemini API key configured.", 503);
     }
 
     const payload = JSON.stringify({
@@ -298,10 +293,7 @@ ${memoryContext}`
       const errorBody = await geminiResponse?.text() || "Unknown error";
       const status = geminiResponse?.status || 500;
       console.error("Gemini API error:", status, errorBody);
-      return NextResponse.json(
-        { error: `Gemini API error (${status}): ${errorBody}` },
-        { status }
-      );
+      return apiError(`Gemini API error (${status})`, status, errorBody);
     }
 
     return new NextResponse(
@@ -388,12 +380,10 @@ ${memoryContext}`
     );
   } catch (error) {
     console.error("Chat error:", error);
-    return NextResponse.json(
-      {
-        error:
-          "Failed to process chat request. Check server logs and verify your Gemini API configuration.",
-      },
-      { status: 500 }
+    return apiError(
+      "Failed to process chat request. Check server logs and verify your Gemini API configuration.",
+      500,
+      String(error)
     );
   }
 }

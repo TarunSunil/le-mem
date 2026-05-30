@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RecentContextTracker } from "@/components/contexts/RecentContextTracker";
 
 export default async function ContextDetailPage({
   params,
@@ -9,6 +10,7 @@ export default async function ContextDetailPage({
 
   return (
     <div className="flex h-full flex-col px-4 py-4 md:px-container-padding md:py-6">
+      <RecentContextTracker id={id} label={id} />
       <div className="mx-auto w-full max-w-5xl">
         <div className="mb-4 flex items-center justify-between gap-3 md:mb-6">
           <Link href="/contexts" className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-on-surface-variant transition-colors hover:text-on-surface md:text-label-sm md:tracking-normal">
