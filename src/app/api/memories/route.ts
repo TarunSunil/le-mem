@@ -28,9 +28,9 @@ export async function GET(req: NextRequest) {
       ...(excludePinned ? { pinned: false } : {}),
     };
 
-    const orderBy = pinnedOnly || excludePinned
-      ? { createdAt: "desc" as const }
-      : ([{ pinned: "desc" as const }, { [sortBy]: "desc" as const }]);
+    const orderBy: import("@prisma/client").Prisma.MemoryOrderByWithRelationInput[] = pinnedOnly || excludePinned
+    ? [{ createdAt: "desc" as const }]
+    : [{ pinned: "desc" as const }, { [sortBy]: "desc" as const }];
 
     // Fetch memories for the user, sorted by creation date (newest first)
     const memories = await prisma.memory.findMany({

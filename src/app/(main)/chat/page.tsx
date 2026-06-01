@@ -59,7 +59,7 @@ export default function ChatPage() {
           return;
         }
 
-        queueMicrotask(() => setMessages(payload.messages));
+        queueMicrotask(() => setMessages(payload.messages ?? []));
       } catch {
         sessionStorage.removeItem(key);
         queueMicrotask(() => setMessages([]));

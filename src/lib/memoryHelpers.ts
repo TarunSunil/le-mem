@@ -325,6 +325,7 @@ export type MemorySearchCandidate = {
   summary?: string | null;
   tags?: string[] | null;
   embedding?: number[] | null;
+  pinned?: boolean;
   entities?: Array<{ entity?: { name?: string | null } | null }>;
   createdAt?: Date;
 };

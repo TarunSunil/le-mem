@@ -63,6 +63,7 @@ export default function SearchPage() {
       setRecentContexts([]);
     }
 
+
     try {
       const stored = sessionStorage.getItem("le-mem:search-cache");
       const parsed = stored ? (JSON.parse(stored) as string[]) : [];
@@ -70,7 +71,7 @@ export default function SearchPage() {
     } catch {
       setCachedMemories([]);
     }
-  }, [cachedMemories]);
+  }, []);
 
   useEffect(() => {
     const loadEntityStats = async () => {

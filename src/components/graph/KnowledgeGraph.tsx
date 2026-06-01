@@ -64,8 +64,8 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
 
     const updateSize = () => {
       setDimensions({
-        width: element.clientWidth,
-        height: Math.max(520, element.clientHeight),
+        width: Math.min(element.clientWidth, 1400),
+        height: Math.min(Math.max(520, element.clientHeight), 900),
       });
     };
 

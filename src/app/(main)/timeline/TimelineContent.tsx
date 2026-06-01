@@ -52,6 +52,9 @@ function TimelineItem({
       ref={containerRef}
       tabIndex={0}
       onKeyDown={(event) => {
+        const target = event.target as HTMLElement;
+        const isEditing = target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable;
+        if (isEditing) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           const firstAction = containerRef.current?.querySelector("button");
@@ -220,6 +223,7 @@ export function TimelineContent() {
 
   const tags = useMemo(() => {
     return Object.entries(tagCounts)
+      .filter(([tag]) => tag.length <= 32)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
       .map(([tag]) => tag);

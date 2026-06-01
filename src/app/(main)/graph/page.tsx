@@ -64,7 +64,7 @@ export default function GraphPage() {
   );
 
   const nodeGroups = useMemo(() => {
-    if (!filteredData?.nodes?.length) return [] as Array<[string, typeof filteredData.nodes]>;
+    if (!filteredData?.nodes?.length) return [] as Array<[string, NonNullable<typeof filteredData>["nodes"]]>;
     const grouped = new Map<string, typeof filteredData.nodes>();
     for (const node of filteredData.nodes) {
       const key = node.type || "UNKNOWN";

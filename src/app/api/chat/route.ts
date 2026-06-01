@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
                 tags: string[] | null;
                 createdAt: Date;
                 embedding: string | null;
+                pinned: boolean;
                 entities: unknown;
               }>
             >`
@@ -131,6 +132,7 @@ export async function POST(req: NextRequest) {
                 tags: string[] | null;
                 createdAt: Date;
                 embedding: string | null;
+                pinned: boolean;
                 entities: unknown;
               }>
             >`

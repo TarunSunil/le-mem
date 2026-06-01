@@ -92,7 +92,7 @@ export function CommandPalette() {
               title,
               summary: result.summary || title,
               type,
-              href: type === "MEMORY" ? "/timeline" : `/contexts/${result.id}`,
+              href: type === "MEMORY" ? `/timeline?highlight=${result.id}` : `/contexts/${result.id}`,
             };
           });
 
@@ -194,7 +194,7 @@ export function CommandPalette() {
                     ? "border-white/30 bg-white/10"
                     : "border-white/10 bg-white/5 hover:border-white/20"
                 }`}
-+                onMouseEnter={() => setActiveIndex(index)}
+                onMouseEnter={() => setActiveIndex(index)}
               >
                 <div className="flex items-center justify-between">
                   <div>
