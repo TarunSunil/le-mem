@@ -1,19 +1,22 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useToast } from "@/components/ui/Toast";
 
 interface TimelineActionsProps {
   id: string;
   content: string;
+  pinned?: boolean;
+  onUpdate?: (next: { content?: string; pinned?: boolean }) => void;
+  onDelete?: () => void;
 }
 
-export function TimelineActions({ id, content }: TimelineActionsProps) {
-  const router = useRouter();
+export function TimelineActions({ id, content, pinned = false, onUpdate, onDelete }: TimelineActionsProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(content);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   const save = async () => {
     const nextContent = draft.trim();
@@ -30,9 +33,32 @@ export function TimelineActions({ id, content }: TimelineActionsProps) {
       });
       if (!response.ok) throw new Error(`Update failed (${response.status})`);
       setIsEditing(false);
-      router.refresh();
+      onUpdate?.({ content: nextContent });
+      addToast("Memory updated", "success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed");
+      addToast(err instanceof Error ? err.message : "Update failed", "error");
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const togglePin = async () => {
+    setIsBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/memory/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned: !pinned }),
+      });
+      if (!response.ok) throw new Error(`Pin update failed (${response.status})`);
+      onUpdate?.({ pinned: !pinned });
+      addToast(pinned ? "Memory unpinned" : "Memory pinned", "success");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Pin update failed");
+      addToast(err instanceof Error ? err.message : "Pin update failed", "error");
     } finally {
       setIsBusy(false);
     }
@@ -49,9 +75,11 @@ export function TimelineActions({ id, content }: TimelineActionsProps) {
         credentials: "include",
       });
       if (!response.ok) throw new Error(`Delete failed (${response.status})`);
-      router.refresh();
+      onDelete?.();
+      addToast("Memory deleted", "success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delete failed");
+      addToast(err instanceof Error ? err.message : "Delete failed", "error");
     } finally {
       setIsBusy(false);
     }
@@ -95,6 +123,17 @@ export function TimelineActions({ id, content }: TimelineActionsProps) {
 
   return (
     <div className="mt-4 flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={togglePin}
+        disabled={isBusy}
+        className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs disabled:opacity-50"
+        style={{ color: "var(--fyi-muted)" }}
+        aria-pressed={pinned}
+      >
+        <span className="material-symbols-outlined text-sm">push_pin</span>
+        {pinned ? "Unpin" : "Pin"}
+      </button>
       <button
         type="button"
         onClick={() => setIsEditing(true)}

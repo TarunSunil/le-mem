@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EntityType, GraphData } from "@/types";
 import { NODE_COLORS } from "@/lib/graph/theme";
@@ -33,11 +33,27 @@ function nodeText(node: ForceGraphNode, field: string): string {
   return typeof value === "string" || typeof value === "number" ? String(value) : "";
 }
 
+function useStableGraphData(data?: GraphData) {
+  const ref = useRef<GraphData | undefined>(data);
+  const signatureRef = useRef<string>(data ? JSON.stringify(data) : "");
+  const nextSignature = data ? JSON.stringify(data) : "";
+
+  if (nextSignature !== signatureRef.current) {
+    signatureRef.current = nextSignature;
+    ref.current = data;
+  }
+
+  return ref.current;
+}
+
 export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
+  const focusedNodeRef = useRef<string | null>(null);
+  const lastTapRef = useRef<number>(0);
   const router = useRouter();
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -61,10 +77,16 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
     return () => observer.disconnect();
   }, []);
 
-  const graphData = useMemo(
-    () => data || { nodes: [], links: [] },
-    [data]
-  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(pointer: coarse)");
+    const update = () => setIsCoarsePointer(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const graphData = useStableGraphData(data) || { nodes: [], links: [] };
   const isEmpty = !isLoading && graphData.nodes.length === 0;
 
   return (
@@ -83,9 +105,24 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
           cooldownTicks={120}
           onEngineStop={() => graphRef.current?.pauseAnimation()}
           onNodeClick={(node: ForceGraphNode) => {
-            if (node?.id) {
-              router.push(`/contexts/${node.id}`);
+            if (!node?.id) return;
+            if (isCoarsePointer || dimensions.width < 640) {
+              const nodeId = String(node.id);
+              const now = Date.now();
+              if (focusedNodeRef.current === nodeId && now - lastTapRef.current < 1500) {
+                router.push(`/contexts/${nodeId}`);
+                focusedNodeRef.current = null;
+                return;
+              }
+              focusedNodeRef.current = nodeId;
+              lastTapRef.current = now;
+              if (node.x != null && node.y != null) {
+                graphRef.current?.centerAt(node.x, node.y, 400);
+                graphRef.current?.zoom(2.2, 500);
+              }
+              return;
             }
+            router.push(`/contexts/${node.id}`);
           }}
           linkCanvasObjectMode={() => "after"}
           linkCanvasObject={(link: ForceGraphLink, ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -116,8 +153,8 @@ export function KnowledgeGraph({ data, isLoading = false }: KnowledgeGraphProps)
           nodeCanvasObject={(node: ForceGraphNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
             const label = nodeText(node, "name");
             if (!label || node.x == null || node.y == null) return;
-            const baseFont = dimensions.width < 480 ? 10 : 14;
-            const fontSize = Math.max(9, baseFont / globalScale);
+            const baseFont = dimensions.width < 480 ? 12 : 14;
+            const fontSize = Math.max(10, baseFont / globalScale);
             ctx.font = `${fontSize}px Sora, sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { KnowledgeGraph } from "@/components/graph/KnowledgeGraph";
 import { GraphFilters } from "@/components/graph/GraphFilters";
 import useSWR from "swr";
@@ -8,6 +9,7 @@ import type { GraphData, EntityType } from "@/types";
 import { ENTITY_LABELS, ENTITY_TYPE_ORDER, NODE_COLORS } from "@/lib/graph/theme";
 
 export default function GraphPage() {
+  const router = useRouter();
   const fetcher = async (url: string) => {
     const response = await fetch(url, { credentials: "include" });
     if (!response.ok) {
@@ -60,6 +62,18 @@ export default function GraphPage() {
     () => availableTypes.map((type) => [ENTITY_LABELS[type], NODE_COLORS[type]] as const),
     [availableTypes]
   );
+
+  const nodeGroups = useMemo(() => {
+    if (!filteredData?.nodes?.length) return [] as Array<[string, typeof filteredData.nodes]>;
+    const grouped = new Map<string, typeof filteredData.nodes>();
+    for (const node of filteredData.nodes) {
+      const key = node.type || "UNKNOWN";
+      const list = grouped.get(key) ?? [];
+      list.push(node);
+      grouped.set(key, list);
+    }
+    return Array.from(grouped.entries());
+  }, [filteredData]);
 
   const handleToggleType = (type: EntityType) => {
     setActiveTypes((prev) =>
@@ -118,7 +132,42 @@ export default function GraphPage() {
             </div>
           )}
 
-          {!error && <KnowledgeGraph data={filteredData || undefined} isLoading={isLoading} />}
+          {!error && (
+            <div className="space-y-4">
+              <KnowledgeGraph data={filteredData || undefined} isLoading={isLoading} />
+
+              {nodeGroups.length > 0 && (
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-[10px] uppercase tracking-[0.22em]" style={{ color: "var(--fyi-accent)" }}>
+                    Node list
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    {nodeGroups.map(([type, nodes]) => (
+                      <div key={type} className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                        <p className="text-[11px] uppercase tracking-[0.2em]" style={{ color: "var(--fyi-muted)" }}>
+                          {ENTITY_LABELS[type as EntityType] ?? type}
+                        </p>
+                        <div className="mt-2 space-y-1">
+                          {nodes.slice(0, 6).map((node) => (
+                            <button
+                              key={node.id}
+                              type="button"
+                              onClick={() => node.id && router.push(`/contexts/${node.id}`)}
+                              className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left text-xs transition hover:border-white/20"
+                              style={{ color: "var(--fyi-text)" }}
+                            >
+                              <span className="truncate">{node.name}</span>
+                              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <aside className="rounded-3xl border border-white/10 bg-white/5 p-4 md:p-5">
             <h2
@@ -164,7 +213,7 @@ export default function GraphPage() {
                 className="mt-2 text-xs leading-5 md:mt-3 md:text-body-md md:leading-7"
                 style={{ color: "var(--fyi-muted)" }}
               >
-                Click a node to open its related context page.
+                Click a node to open its related context page. On touch devices, tap once to focus and tap again to open.
               </p>
             </div>
           </aside>

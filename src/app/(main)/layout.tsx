@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { getCachedSession } from "@/lib/auth/get-session";
 import { redirect } from "next/navigation";
+import { CommandPalette } from "@/components/search/CommandPalette";
 
 export default async function MainLayout({
   children,
@@ -28,6 +29,8 @@ export default async function MainLayout({
 
       {/* Mobile Bottom Nav */}
       <BottomNav />
+
+      <CommandPalette />
 
       {/* Ambient Orbs Background */}
       <div className="fixed -z-10 inset-0 overflow-hidden pointer-events-none">

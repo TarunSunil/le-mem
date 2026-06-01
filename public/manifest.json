@@ -1,0 +1,11 @@
+{
+  "name": "FYI - Personal Memory OS",
+  "short_name": "FYI",
+  "theme_color": "#0f0e0b",
+  "background_color": "#0f0e0b",
+  "display": "standalone",
+  "start_url": "/chat",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

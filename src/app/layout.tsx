@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Sora } from "next/font/google";
 import "./globals.css";
 import { RootSessionProvider } from "@/components/providers/SessionProvider";
+import { ServiceWorker } from "@/components/pwa/ServiceWorker";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -18,6 +19,8 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "FYI - Personal Memory OS",
   description: "FYI is a private memory companion that keeps your context organized.",
+  manifest: "/manifest.json",
+  themeColor: "#0f0e0b",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
@@ -42,7 +45,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-dvh font-sans">
-        <RootSessionProvider>{children}</RootSessionProvider>
+        <RootSessionProvider>
+          <ServiceWorker />
+          {children}
+        </RootSessionProvider>
       </body>
     </html>
   );

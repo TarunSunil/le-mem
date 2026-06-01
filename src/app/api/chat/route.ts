@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
             tags: string[] | null;
             createdAt: Date;
             embedding: string | null;
+            pinned: boolean;
             entities: unknown;
           }> = [];
 
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
                 m.summary,
                 m.tags,
                 m."createdAt",
+                m.pinned,
                 m.embedding::text AS embedding,
                 COALESCE(
                   json_agg(
@@ -111,7 +113,7 @@ export async function POST(req: NextRequest) {
               LEFT JOIN "MemoryEntity" me ON me."memoryId" = m.id
               LEFT JOIN "Entity" e ON e.id = me."entityId"
               WHERE m."userId" = ${user.id}
-              GROUP BY m.id, m.content, m."rawInput", m.summary, m.tags, m."createdAt", m.embedding
+              GROUP BY m.id, m.content, m."rawInput", m.summary, m.tags, m."createdAt", m.pinned, m.embedding
               ORDER BY
                 CASE
                   WHEN m.embedding IS NOT NULL THEN m.embedding <=> ${vectorStr}::vector
@@ -139,6 +141,7 @@ export async function POST(req: NextRequest) {
                 m.summary,
                 m.tags,
                 m."createdAt",
+                m.pinned,
                 m.embedding::text AS embedding,
                 COALESCE(
                   json_agg(
@@ -150,7 +153,7 @@ export async function POST(req: NextRequest) {
               LEFT JOIN "MemoryEntity" me ON me."memoryId" = m.id
               LEFT JOIN "Entity" e ON e.id = me."entityId"
               WHERE m."userId" = ${user.id}
-              GROUP BY m.id, m.content, m."rawInput", m.summary, m.tags, m."createdAt", m.embedding
+              GROUP BY m.id, m.content, m."rawInput", m.summary, m.tags, m."createdAt", m.pinned, m.embedding
               ORDER BY m."createdAt" DESC
               LIMIT 300
             `;
@@ -194,8 +197,17 @@ export async function POST(req: NextRequest) {
             topK
           );
 
-          if (matches.length > 0) {
-            memoryContext = matches
+          const pinnedLimit = 10;
+          const pinnedMemories = parsedMemories.filter((m) => m.pinned).slice(0, pinnedLimit);
+          const pinnedIds = new Set(pinnedMemories.map((m) => m.id));
+          const allowedMatches = matches.filter((m) => !pinnedIds.has(m.id));
+          const combined = [
+            ...pinnedMemories,
+            ...allowedMatches.slice(0, Math.max(0, topK - pinnedMemories.length)),
+          ];
+
+          if (combined.length > 0) {
+            memoryContext = combined
               .map((m) => {
                 const dateStr = m.createdAt
                   ? new Date(m.createdAt).toLocaleDateString("en-US", {
@@ -205,7 +217,8 @@ export async function POST(req: NextRequest) {
                     })
                   : "";
                 const prefix = dateStr ? `[${dateStr}] ` : "";
-                return `- ${prefix}${m.summary || m.content.slice(0, 300)}`;
+                const pinnedTag = m.pinned ? "(pinned) " : "";
+                return `- ${pinnedTag}${prefix}${m.summary || m.content.slice(0, 300)}`;
               })
               .join("\n");
           } else if (parsedMemories.length > 0) {

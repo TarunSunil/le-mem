@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
+import { apiError } from "@/lib/api-error";
 
 type ContextItem = {
   id: string;
@@ -20,12 +21,12 @@ export async function GET(_req: NextRequest) {
   try {
     const session = await getCachedSession();
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError("Unauthorized", 401);
     }
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError("User not found", 404);
     }
 
     const entities = await prisma.entity.findMany({ where: { userId: user.id } });
@@ -85,6 +86,6 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ groups });
   } catch (error) {
     console.error("Contexts API error:", error);
-    return NextResponse.json({ error: "Failed to fetch contexts" }, { status: 500 });
+    return apiError("Failed to fetch contexts", 500, String(error));
   }
 }
