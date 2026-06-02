@@ -6,16 +6,15 @@ export function proxy(request: NextRequest) {
 
   if (request.method !== "GET" && pathname.startsWith("/api/")) {
     const origin = request.headers.get("origin");
-    const allowedBase = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const allowedOrigin = (() => {
-      try {
-        return new URL(allowedBase).origin;
-      } catch {
-        return allowedBase;
-      }
-    })();
+    const allowedOrigins = [
+      process.env.NEXTAUTH_URL,
+      "https://le-mem-inky.vercel.app",
+      "http://localhost:3000",
+    ].filter(Boolean).map((url) => {
+      try { return new URL(url!).origin; } catch { return url!; }
+    });
 
-    if (origin && !origin.startsWith(allowedOrigin)) {
+    if (origin && !allowedOrigins.some((allowed) => origin.startsWith(allowed))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
