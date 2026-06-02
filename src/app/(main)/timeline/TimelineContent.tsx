@@ -49,6 +49,7 @@ function TimelineItem({
 
   return (
     <article
+      id={`memory-${memory.id}`}
       ref={containerRef}
       tabIndex={0}
       onKeyDown={(event) => {
@@ -186,12 +187,52 @@ export function TimelineContent() {
       setError(err instanceof Error ? err.message : "Failed to load timeline");
     } finally {
       setIsLoading(false);
+      // Trigger highlight scroll after data loads
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const highlightId = params.get("highlight");
+        if (highlightId) {
+          const tryScroll = (attempts = 0) => {
+            const el = document.getElementById(`memory-${highlightId}`);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+              el.style.outline = "2px solid var(--fyi-accent)";
+              setTimeout(() => { el.style.outline = ""; }, 2500);
+              return;
+            }
+            if (attempts < 15) setTimeout(() => tryScroll(attempts + 1), 300);
+          };
+          setTimeout(() => tryScroll(), 100);
+        }
+      }
     }
   }, []);
 
   useEffect(() => {
     void refreshTimeline();
   }, [refreshTimeline]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const highlightId = params.get("highlight");
+    if (!highlightId) return;
+
+    const tryScroll = (attempts = 0) => {
+      const el = document.getElementById(`memory-${highlightId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.style.outline = "2px solid var(--fyi-accent)";
+        setTimeout(() => { el.style.outline = ""; }, 2500);
+        return;
+      }
+      if (attempts < 20) setTimeout(() => tryScroll(attempts + 1), 500);
+    };
+
+    // Wait for initial data load before starting scroll attempts
+    const initialDelay = setTimeout(() => tryScroll(), 1000);
+    return () => clearTimeout(initialDelay);
+  }, []);
 
   const handleLoadMore = async () => {
     if (!nextCursor) return;
