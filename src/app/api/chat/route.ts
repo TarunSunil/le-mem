@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const body = (await req.json()) as {
       messages?: Array<{ role: string; content: string }>;
-      mode?: "store" | "ask";
+      mode?: "store" | "ask" | "agent";
     };
 
     const { messages, mode = "store" } = body as {
@@ -52,6 +52,9 @@ export async function POST(req: NextRequest) {
     if (!checkRateLimit(`chat:${session.user.email}`)) {
       return apiError("Too many requests. Please wait a moment.", 429);
     }
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
 // ── Agent mode ──────────────────────────────────────────────────
 if (mode === "agent") {
   if (!user) return apiError("User not found", 404);
@@ -98,10 +101,6 @@ if (mode === "agent") {
 
     if (latestUserMsg) {
       try {
-        const user = await prisma.user.findUnique({
-          where: { email: session.user.email },
-        });
-
         if (user) {
           let queryEmbedding: number[] | null = null;
           try {
