@@ -13,9 +13,10 @@ type MessageBubbleProps = {
   contexts?: string[];
   mode?: ChatMode;
   createdAt?: number;
+  trace?: Array<{ type: string; toolName?: string; content: string }>;
 };
 
-export function MessageBubble({ role, content, contexts, mode, createdAt }: MessageBubbleProps) {
+export function MessageBubble({ role, content, contexts, mode, createdAt, trace }: MessageBubbleProps) {
   const isUser = role === "user";
   const isAsk = mode === "ask";
   const [copied, setCopied] = useState(false);
@@ -109,6 +110,33 @@ export function MessageBubble({ role, content, contexts, mode, createdAt }: Mess
           {content}
         </ReactMarkdown>
       </div>
+      {!isUser && trace && trace.length > 0 && (
+        <details className="mt-3 rounded-2xl border border-white/10 bg-black/20">
+          <summary
+            className="cursor-pointer px-4 py-2 text-[11px] uppercase tracking-[0.2em] select-none"
+            style={{ color: "var(--fyi-accent)" }}
+          >
+            {trace.length} reasoning step{trace.length !== 1 ? "s" : ""}
+          </summary>
+          <div className="space-y-2 px-4 pb-4 pt-2">
+            {trace.map((step, i) => (
+              <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="material-symbols-outlined text-sm" style={{ color: "var(--fyi-highlight)" }}>
+                    {step.type === "tool_call" ? "build" : step.type === "tool_result" ? "check_circle" : "psychology"}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.2em]" style={{ color: "var(--fyi-muted)" }}>
+                    {step.toolName ? `${step.type} · ${step.toolName}` : step.type}
+                  </span>
+                </div>
+                <pre className="text-[11px] leading-5 whitespace-pre-wrap break-words" style={{ color: "var(--fyi-muted)" }}>
+                  {step.content.slice(0, 400)}{step.content.length > 400 ? "…" : ""}
+                </pre>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
 
       {contexts && contexts.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">

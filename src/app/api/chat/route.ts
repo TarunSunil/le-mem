@@ -1,4 +1,6 @@
 // src/app/api/chat/route.ts
+import { runAgentLoop } from "@/lib/agents/orchestrator";
+import type { TraceStep } from "@/lib/agents/orchestrator";
 import { authOptions } from "@/auth";
 import { getCachedSession } from "@/lib/auth/get-session";
 import { prisma } from "@/lib/db/prisma";
@@ -7,6 +9,7 @@ import { rankMemoriesForQuery } from "@/lib/memoryHelpers";
 import { apiError } from "@/lib/api-error";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { NextRequest, NextResponse } from "next/server";
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,7 +29,10 @@ export async function POST(req: NextRequest) {
       mode?: "store" | "ask";
     };
 
-    const { messages, mode = "store" } = body;
+    const { messages, mode = "store" } = body as {
+  messages?: Array<{ role: string; content: string }>;
+  mode?: "store" | "ask" | "agent";
+};
 
     if (!messages || !Array.isArray(messages)) {
       return apiError("Invalid request body: 'messages' must be an array.", 400);
@@ -46,6 +52,43 @@ export async function POST(req: NextRequest) {
     if (!checkRateLimit(`chat:${session.user.email}`)) {
       return apiError("Too many requests. Please wait a moment.", 429);
     }
+// ── Agent mode ──────────────────────────────────────────────────
+if (mode === "agent") {
+  if (!user) return apiError("User not found", 404);
+
+  return new NextResponse(
+    new ReadableStream({
+      async start(controller) {
+        const enc = new TextEncoder();
+        try {
+          const finalAnswer = await runAgentLoop(
+            user.id,
+            messages,
+            (step: TraceStep) => {
+              controller.enqueue(
+                enc.encode(`__trace__:${JSON.stringify(step)}\n`)
+              );
+            }
+          );
+          controller.enqueue(enc.encode(finalAnswer));
+        } catch (err) {
+          controller.enqueue(enc.encode("Agent encountered an error. Please try again."));
+          console.error("Agent error:", err);
+        } finally {
+          controller.close();
+        }
+      },
+    }),
+    {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    }
+  );
+}
+// ── End agent mode ──────────────────────────────────────────────
 
     let memoryContext = "";
     const latestUserMsg = messages

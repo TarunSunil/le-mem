@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isQuestionLike } from "@/lib/memoryHelpers";
 
-export type ChatMode = "store" | "ask";
-
+export type ChatMode = "store" | "ask" | "agent";
 interface ChatInputProps {
   onSend: (message: string, mode: ChatMode) => void;
   isLoading?: boolean;
@@ -102,6 +101,19 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
           >
             <span className="material-symbols-outlined text-base">manage_search</span>
             Ask
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("agent")}
+            className={
+              "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] transition-colors md:text-label-sm md:tracking-normal " +
+              (mode === "agent" ? "bg-white/10" : "opacity-70 hover:opacity-100")
+            }
+            aria-pressed={mode === "agent"}
+            style={{ color: "var(--fyi-highlight)" }}
+          >
+            <span className="material-symbols-outlined text-base">psychology</span>
+            Agent
           </button>
         </div>
 

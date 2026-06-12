@@ -13,6 +13,7 @@ interface Message {
   contexts?: string[];
   mode?: ChatMode;
   createdAt?: number;
+  trace?: Array<{ type: string; toolName?: string; content: string }>;
 }
 
 const MAX_STORED_MESSAGES = 50;
@@ -161,21 +162,46 @@ export default function ChatPage() {
       if (!reader) throw new Error("No response body");
 
       let assistantContent = "";
+      const traceSteps: Array<{ type: string; toolName?: string; content: string }> = [];
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        assistantContent += new TextDecoder().decode(value);
 
-        setMessages((prev) => {
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
-          if (last && last.role === "assistant") {
-            last.content = assistantContent;
-          } else {
-            updated.push({ role: "assistant", content: assistantContent, createdAt: Date.now() });
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("__trace__:")) {
+            try {
+              const step = JSON.parse(line.slice("__trace__:".length));
+              traceSteps.push(step);
+              // Update the assistant message with latest trace
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.role === "assistant") {
+                  (last as Message & { trace?: typeof traceSteps }).trace = [...traceSteps];
+                } else {
+                  updated.push({ role: "assistant", content: "", trace: [...traceSteps], createdAt: Date.now() });
+                }
+                return updated;
+              });
+            } catch { /* ignore malformed trace */ }
+          } else if (line) {
+            assistantContent += line;
+            setMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last?.role === "assistant") {
+                last.content = assistantContent;
+              } else {
+                updated.push({ role: "assistant", content: assistantContent, createdAt: Date.now() });
+              }
+              return updated;
+            });
           }
-          return updated;
-        });
+        }
       }
     } catch (err) {
       addToast(err instanceof Error ? err.message : "An error occurred", "error");
@@ -231,6 +257,7 @@ export default function ChatPage() {
                 contexts={message.contexts}
                 mode={message.mode}
                 createdAt={message.createdAt}
+                trace={message.trace}
               />
             ))}
           </section>
