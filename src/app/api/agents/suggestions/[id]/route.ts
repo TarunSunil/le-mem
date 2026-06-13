@@ -6,8 +6,9 @@ import { prisma } from "@/lib/db/prisma";
 // PATCH /api/agents/suggestions/:id — dismiss a suggestion
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,14 +24,14 @@ export async function PATCH(
 
   // Verify ownership before updating
   const suggestion = await prisma.agentSuggestion.findFirst({
-    where: { id: params.id, userId: user.id },
+    where: { id, userId: user.id },
   });
   if (!suggestion) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const updated = await prisma.agentSuggestion.update({
-    where: { id: params.id },
+    where: { id },
     data: { dismissed: true },
   });
 
