@@ -12,7 +12,7 @@ export type TraceStep = {
   content: string;
 };
 
-const MAX_ITERATIONS = 5;
+const MAX_ITERATIONS = parseInt(process.env.AGENT_MAX_TOOL_CALLS ?? "5", 10);
 
 export async function runAgentLoop(
   userId: string,

@@ -165,19 +165,20 @@ export default function ChatPage() {
       let assistantContent = "";
       const traceSteps: Array<{ type: string; toolName?: string; content: string }> = [];
 
+      let buffer = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split("\n");
+        buffer += new TextDecoder().decode(value);
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
 
         for (const line of lines) {
           if (line.startsWith("__trace__:")) {
             try {
               const step = JSON.parse(line.slice("__trace__:".length));
               traceSteps.push(step);
-              // Update the assistant message with latest trace
               setMessages((prev) => {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];
@@ -189,7 +190,7 @@ export default function ChatPage() {
                 return updated;
               });
             } catch { /* ignore malformed trace */ }
-          } else if (line) {
+          } else if (line.trim()) {
             assistantContent += line;
             setMessages((prev) => {
               const updated = [...prev];
@@ -203,6 +204,28 @@ export default function ChatPage() {
             });
           }
         }
+      }
+
+      // Flush remaining buffer after stream ends
+      if (buffer.trim()) {
+        if (buffer.startsWith("__trace__:")) {
+          try {
+            const step = JSON.parse(buffer.slice("__trace__:".length));
+            traceSteps.push(step);
+          } catch { /* ignore */ }
+        } else {
+          assistantContent += buffer;
+          setMessages((prev) => {
+            const updated = [...prev];
+            const last = updated[updated.length - 1];
+            if (last?.role === "assistant") {
+              last.content = assistantContent;
+            }
+            return updated;
+          });
+        }
+      }
+      
       }
     } catch (err) {
       addToast(err instanceof Error ? err.message : "An error occurred", "error");

@@ -41,14 +41,45 @@ export async function executeTool(
     }
 
     case "search_web": {
-      // Stub — wire to Serper/Brave/DuckDuckGo API later
-      return {
-        success: true,
-        data: {
-          note: "Web search not yet connected. Falling back to memory-only answer.",
-          results: [],
-        },
-      };
+      const query = String(args.query ?? "").trim();
+      if (!query) return { success: false, data: null, error: "Empty query" };
+
+      const serperKey = process.env.SERPER_API_KEY;
+      if (!serperKey) {
+        return {
+          success: true,
+          data: {
+            note: "Web search not configured. Add SERPER_API_KEY to enable.",
+            results: [],
+          },
+        };
+      }
+
+      try {
+        const res = await fetch("https://google.serper.dev/search", {
+          method: "POST",
+          headers: {
+            "X-API-KEY": serperKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ q: query, num: 5 }),
+        });
+
+        const data = await res.json();
+        const results = (data.organic ?? []).slice(0, 5).map((r: {
+          title: string;
+          snippet: string;
+          link: string;
+        }) => ({
+          title: r.title,
+          snippet: r.snippet,
+          url: r.link,
+        }));
+
+        return { success: true, data: { results } };
+      } catch (err) {
+        return { success: false, data: null, error: String(err) };
+      }
     }
 
     default:
