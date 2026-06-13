@@ -52,9 +52,11 @@ export async function POST(req: NextRequest) {
     if (!checkRateLimit(`chat:${session.user.email}`)) {
       return apiError("Too many requests. Please wait a moment.", 429);
     }
+
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
+
 // ── Agent mode ──────────────────────────────────────────────────
 if (mode === "agent") {
   if (!user) return apiError("User not found", 404);

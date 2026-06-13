@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/Toast";
+import { AgentSuggestions } from "@/components/chat/AgentSuggestions";
 
 interface Message {
   role: "user" | "assistant";
@@ -249,6 +250,8 @@ export default function ChatPage() {
           </section>
 
           <section className="space-y-3">
+            {/* Agent suggestion cards */}
+            <AgentSuggestions />
             {messages.map((message, index) => (
               <MessageBubble
                 key={`${message.role}-${index}`}

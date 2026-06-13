@@ -2,10 +2,13 @@ import { withGeminiFallback } from "@/lib/ai/gemini-fallback";
 import { TOOL_DECLARATIONS } from "./tools";
 import { executeTool } from "./tool-executor";
 import { searchMemories } from "./memory-search";
+import { runReasonerAgent, isComplexQuery } from "./reasoner";
 
 export type TraceStep = {
-  type: "thought" | "tool_call" | "tool_result" | "synthesis";
+  type: "thought" | "tool_call" | "tool_result" | "synthesis" | "decompose" | "retrieve";
   toolName?: string;
+  subQuestion?: string;
+  index?: number;
   content: string;
 };
 
@@ -19,6 +22,14 @@ export async function runAgentLoop(
   const lastUserMsg =
     [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
+  // Route complex queries to the multi-step reasoner
+  if (isComplexQuery(lastUserMsg)) {
+    return runReasonerAgent(userId, lastUserMsg, (step) =>
+      onTrace(step as TraceStep)
+    );
+  }
+
+  // Standard tool-calling agent loop
   const { memoryContext } = await searchMemories(userId, lastUserMsg, 5);
 
   const systemPrompt = [

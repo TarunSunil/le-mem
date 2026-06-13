@@ -89,35 +89,28 @@ model MemoryEntity {
 }
 
 model AgentSuggestion {
-  id         String   @id
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  type       String
-  title      String
-  body       String
-
-  memoryIds  String[]
-
-  dismissed  Boolean  @default(false)
-
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  memoryIds String[]
+  dismissed Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   @@index([userId, dismissed])
 }
 
 model AgentTrace {
-  id         String   @id
-
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  sessionId  String
-  step       Int
-  type       String
-  content    String
-
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String
+  step      Int
+  type      String
+  content   String
+  createdAt DateTime @default(now())
 
   @@index([userId, sessionId])
 }
