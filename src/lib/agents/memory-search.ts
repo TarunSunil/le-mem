@@ -5,7 +5,7 @@ import { rankMemoriesForQuery } from "@/lib/memoryHelpers";
 export type MemorySearchResult = {
   id: string;
   content: string;
-  rawInput: string;
+  rawInput?: string;
   summary: string | null;
   tags: string[] | null;
   createdAt: Date;
