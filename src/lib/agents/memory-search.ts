@@ -10,7 +10,7 @@ export type MemorySearchResult = {
   tags?: string[] | null;
   createdAt?: Date;
   embedding?: number[] | null;
-  pinned: boolean;
+  pinned?: boolean;
   entities: Array<{ entity?: { name?: string | null } | null }>;
 };
 
