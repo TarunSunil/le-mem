@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/authOptions";
+import { authOptions } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 
 // GET /api/agents/suggestions — returns undismissed suggestions for the current user

@@ -225,8 +225,6 @@ export default function ChatPage() {
           });
         }
       }
-      
-      }
     } catch (err) {
       addToast(err instanceof Error ? err.message : "An error occurred", "error");
       console.error("Chat error:", err);
