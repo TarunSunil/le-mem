@@ -6,10 +6,10 @@ export type MemorySearchResult = {
   id: string;
   content: string;
   rawInput?: string;
-  summary: string | null;
-  tags: string[] | null;
+  summary?: string | null;
+  tags?: string[] | null;
   createdAt: Date;
-  embedding: number[] | null;
+  embedding?: number[] | null;
   pinned: boolean;
   entities: Array<{ entity?: { name?: string | null } | null }>;
 };
