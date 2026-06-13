@@ -75,7 +75,7 @@ export async function searchMemories(
       : Array.isArray(m.entities) ? m.entities : [],
   }));
 
-  const top = rankMemoriesForQuery(query, parsed, queryEmbedding, limit);
+const top = rankMemoriesForQuery(query, parsed, queryEmbedding, limit) as MemorySearchResult[];
 
   const memoryContext = top.map((m) => {
     const date = m.createdAt
