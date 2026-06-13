@@ -8,7 +8,7 @@ export type MemorySearchResult = {
   rawInput?: string;
   summary?: string | null;
   tags?: string[] | null;
-  createdAt: Date;
+  createdAt?: Date;
   embedding?: number[] | null;
   pinned: boolean;
   entities: Array<{ entity?: { name?: string | null } | null }>;
@@ -28,8 +28,8 @@ export async function searchMemories(
   }
 
   type RawRow = {
-    id: string; content: string; rawInput: string; summary: string | null;
-    tags: string[] | null; createdAt: Date; embedding: string | null;
+    id: string; content: string; rawInput?: string; summary?: string | null;
+    tags?: string[] | null; createdAt?: Date; embedding?: string | null;
     pinned: boolean; entities: unknown;
   };
 
