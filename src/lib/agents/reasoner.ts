@@ -28,7 +28,7 @@ export function isComplexQuery(query: string): boolean {
 
 async function decomposeQuery(
   query: string,
-  genAI: ReturnType<typeof import("@google/generative-ai").GoogleGenerativeAI.prototype.getGenerativeModel> extends never ? never : InstanceType<typeof import("@google/generative-ai").GoogleGenerativeAI>
+  genAI: import("@google/generative-ai").GoogleGenerativeAI
 ): Promise<string[]> {
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   const prompt = `Break the following user query into 2-4 independent sub-questions that together fully answer the original. 
