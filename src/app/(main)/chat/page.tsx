@@ -163,6 +163,14 @@ export default function ChatPage() {
       if (!reader) throw new Error("No response body");
 
       let assistantContent = "";
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "",
+          createdAt: Date.now(),
+        },
+      ]);
       const traceSteps: Array<{ type: string; toolName?: string; content: string }> = [];
 
       let buffer = "";
@@ -220,6 +228,12 @@ export default function ChatPage() {
             const last = updated[updated.length - 1];
             if (last?.role === "assistant") {
               last.content = assistantContent;
+            } else {
+              updated.push({
+                role: "assistant",
+                content: assistantContent,
+                createdAt: Date.now(),
+              });
             }
             return updated;
           });
