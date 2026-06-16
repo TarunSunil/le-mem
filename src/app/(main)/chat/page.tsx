@@ -16,7 +16,8 @@ interface Message {
   createdAt?: number;
   trace?: Array<{ type: string; toolName?: string; content: string }>;
 }
-
+const HISTORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_STORED_MESSAGES = 100;
 
 
 export default function ChatPage() {
