@@ -17,8 +17,7 @@ interface Message {
   trace?: Array<{ type: string; toolName?: string; content: string }>;
 }
 
-const MAX_STORED_MESSAGES = 50;
-const HISTORY_TTL_MS = 8 * 60 * 60 * 1000;
+
 
 export default function ChatPage() {
   const { data: session, status } = useSession();
@@ -27,7 +26,6 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const storageKeyRef = useRef<string | null>(null);
   const { addToast } = useToast();
 
   useEffect(() => {

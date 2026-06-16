@@ -35,7 +35,7 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      caches.match(request).then((cached) => cached || fetch(request).catch(() => caches.match("/chat")))
+      fetch(request).catch(() => caches.match("/chat"))
     );
   }
 });
