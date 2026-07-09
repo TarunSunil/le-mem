@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!checkRateLimit(`chat:${session.user.email}`)) {
+    if (!(await checkRateLimit(`chat:${session.user.email}`))) {
       return apiError("Too many requests. Please wait a moment.", 429);
     }
 

@@ -36,6 +36,9 @@ export async function GET(request: NextRequest) {
         fromEntity: {
           userId,
         },
+        toEntity: {
+          userId,
+        },
       },
       select: {
         fromEntityId: true,

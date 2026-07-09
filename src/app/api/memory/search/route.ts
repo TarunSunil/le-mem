@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return apiError("Unauthorized", 401);
     }
 
-    if (!checkRateLimit(`search:${session.user.email}`)) {
+    if (!(await checkRateLimit(`search:${session.user.email}`))) {
       return apiError("Too many requests. Please wait a moment.", 429);
     }
 

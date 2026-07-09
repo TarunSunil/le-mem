@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ExtractedEntities } from "@/types";
 import { isQuestionLike, splitFactsHeuristic } from "@/lib/memoryHelpers";
+import { normalizeEntityName } from "@/lib/entity-normalization";
 import { withGeminiFallback } from "./gemini-fallback";
 
 export type IngestedFact = {
@@ -61,13 +62,18 @@ function emptyEntities(): ExtractedEntities {
 }
 
 function normalizeEntities(raw?: Partial<ExtractedEntities>): ExtractedEntities {
+  const normalizeList = <T extends { name: string }>(items: T[] | undefined): T[] =>
+    (items ?? [])
+      .map((item) => ({ ...item, name: item.name.trim().replace(/\s+/g, " ") }))
+      .filter((item) => normalizeEntityName(item.name).length > 0) as T[];
+
   return {
-    people: raw?.people ?? [],
-    organizations: raw?.organizations ?? [],
-    places: raw?.places ?? [],
-    projects: raw?.projects ?? [],
-    topics: raw?.topics ?? [],
-    events: raw?.events ?? [],
+    people: normalizeList(raw?.people),
+    organizations: normalizeList(raw?.organizations),
+    places: normalizeList(raw?.places),
+    projects: normalizeList(raw?.projects),
+    topics: normalizeList(raw?.topics),
+    events: normalizeList(raw?.events),
     relationships: raw?.relationships ?? [],
   };
 }

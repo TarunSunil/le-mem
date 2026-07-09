@@ -1,35 +1,47 @@
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
 const REQUEST_LIMIT = 30;
 const WINDOW_MS = 60_000;
 
-type WindowEntry = {
-  count: number;
-  reset: number;
-};
+let limiter: Ratelimit | null | undefined;
 
-const userWindowMap = new Map<string, WindowEntry>();
+function getLimiter(): Ratelimit | null {
+  if (limiter !== undefined) return limiter;
 
-function cleanupExpired(now: number) {
-  for (const [key, entry] of userWindowMap.entries()) {
-    if (now > entry.reset) {
-      userWindowMap.delete(key);
-    }
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) {
+    limiter = null;
+    return limiter;
   }
+
+  try {
+    const redis = Redis.fromEnv();
+    limiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(REQUEST_LIMIT, `${WINDOW_MS} ms`),
+      analytics: true,
+    });
+  } catch (error) {
+    console.warn("Rate limiter unavailable, falling back open:", error);
+    limiter = null;
+  }
+
+  return limiter;
 }
 
-export function checkRateLimit(key: string): boolean {
-  const now = Date.now();
-  cleanupExpired(now);
-
-  const entry = userWindowMap.get(key);
-  if (!entry || now > entry.reset) {
-    userWindowMap.set(key, { count: 1, reset: now + WINDOW_MS });
+export async function checkRateLimit(key: string): Promise<boolean> {
+  const current = getLimiter();
+  if (!current) {
     return true;
   }
 
-  if (entry.count >= REQUEST_LIMIT) {
-    return false;
+  try {
+    const result = await current.limit(key);
+    return result.success;
+  } catch (error) {
+    console.warn("Rate limiter error, falling back open:", error);
+    return true;
   }
-
-  entry.count += 1;
-  return true;
 }

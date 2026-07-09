@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@upstash/ratelimit": "^2.0.5",
+    "@upstash/redis": "^1.35.4",
     "@prisma/client": "^6.16.2",
     "dotenv": "^17.4.2",
     "next": "16.2.6",

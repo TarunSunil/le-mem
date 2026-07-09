@@ -5,6 +5,7 @@ import {
   rankMemoriesForQuery,
   splitFactsHeuristic,
 } from "../memoryHelpers";
+import { normalizeEntityName } from "../entity-normalization";
 
 describe("isQuestionLike", () => {
   it("detects imperative query phrases", () => {
@@ -76,5 +77,11 @@ describe("rankMemoriesForQuery", () => {
 
     const ranked = rankMemoriesForQuery("list my hobbies", memories, null, 5);
     expect(ranked[0].id).toBe("1");
+  });
+});
+
+describe("normalizeEntityName", () => {
+  it("trims, collapses whitespace, and casefolds names", () => {
+    expect(normalizeEntityName("  Brain   Tumor  Classifier  ")).toBe("brain tumor classifier");
   });
 });

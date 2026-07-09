@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/timeline", icon: "schedule", label: "Timeline" },
   { href: "/search", icon: "search", label: "Search" },
   { href: "/insights", icon: "bar_chart", label: "Insights" },
+  { href: "/settings", icon: "settings", label: "Settings" },
 ];
 
 export function BottomNav() {

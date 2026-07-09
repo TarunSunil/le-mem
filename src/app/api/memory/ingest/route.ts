@@ -7,6 +7,7 @@ import { isQuestionLike, makeMemoryTitle } from "@/lib/memoryHelpers";
 import { ContentType } from "@/types";
 import { apiError } from "@/lib/api-error";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { normalizeEntityName } from "@/lib/entity-normalization";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -23,8 +24,13 @@ export async function POST(request: NextRequest) {
       return apiError("Unauthorized", 401);
     }
 
-    if (!checkRateLimit(`ingest:${session.user.email}`)) {
+    if (!(await checkRateLimit(`ingest:${session.user.email}`))) {
       return apiError("Too many requests. Please wait a moment.", 429);
+    }
+
+    const allowedContentTypes: ContentType[] = ["TEXT", "IMAGE", "AUDIO", "PDF", "LINK", "CONTEXT_UPDATE"];
+    if (!allowedContentTypes.includes(contentType as ContentType)) {
+      return apiError("Invalid contentType", 400);
     }
 
     let user = await prisma.user.findUnique({
@@ -138,15 +144,55 @@ export async function POST(request: NextRequest) {
       }
 
       // 4. Process entities and create relationships
-      const entityMap: Record<string, string> = {}; // name -> id mapping
+      const entityMap: Record<string, string> = {}; // normalized name -> id mapping
+      const seenEntityKeys = new Set<string>();
+
+      const rememberEntity = (name: string, id: string) => {
+        entityMap[normalizeEntityName(name)] = id;
+      };
+
+      const shouldProcess = (name: string) => {
+        const key = normalizeEntityName(name);
+        if (!key || seenEntityKeys.has(key)) return false;
+        seenEntityKeys.add(key);
+        return true;
+      };
+
+      const upsertEntity = async (
+        lookup: { name: string; type: "PERSON" | "ORGANIZATION" | "PLACE" | "PROJECT" | "TOPIC" | "EVENT" },
+        data: Record<string, unknown>
+      ) => {
+        const normalizedName = normalizeEntityName(lookup.name);
+        return prisma.entity.upsert({
+          where: {
+            userId_normalizedName_type: {
+              userId: user.id,
+              normalizedName,
+              type: lookup.type,
+            },
+          },
+          update: {
+            ...data,
+            normalizedName,
+          },
+          create: {
+            userId: user.id,
+            name: lookup.name.trim().replace(/\s+/g, " "),
+            normalizedName,
+            type: lookup.type,
+            ...data,
+          },
+        });
+      };
 
       // Add people
       for (const person of extractedData.people) {
+        if (!shouldProcess(person.name)) continue;
         const entity = await prisma.entity.upsert({
           where: {
-            userId_name_type: {
+            userId_normalizedName_type: {
               userId: user.id,
-              name: person.name,
+              normalizedName: normalizeEntityName(person.name),
               type: "PERSON",
             },
           },
@@ -155,10 +201,12 @@ export async function POST(request: NextRequest) {
             attributes: {
               relationship: person.relationship,
             },
+            normalizedName: normalizeEntityName(person.name),
           },
           create: {
             userId: user.id,
-            name: person.name,
+            name: person.name.trim().replace(/\s+/g, " "),
+            normalizedName: normalizeEntityName(person.name),
             type: "PERSON",
             summary: person.context ? makeMemoryTitle(person.context) : undefined,
             attributes: {
@@ -166,7 +214,7 @@ export async function POST(request: NextRequest) {
             },
           },
         });
-        entityMap[person.name] = entity.id;
+        rememberEntity(person.name, entity.id);
 
         // Create memory-entity link
         await prisma.memoryEntity.create({
@@ -179,23 +227,9 @@ export async function POST(request: NextRequest) {
 
       // Add organizations
       for (const org of extractedData.organizations) {
-        const entity = await prisma.entity.upsert({
-          where: {
-            userId_name_type: {
-              userId: user.id,
-              name: org.name,
-              type: "ORGANIZATION",
-            },
-          },
-          update: {},
-          create: {
-            userId: user.id,
-            name: org.name,
-            type: "ORGANIZATION",
-            attributes: { type: org.type },
-          },
-        });
-        entityMap[org.name] = entity.id;
+        if (!shouldProcess(org.name)) continue;
+        const entity = await upsertEntity({ name: org.name, type: "ORGANIZATION" }, { attributes: { type: org.type } });
+        rememberEntity(org.name, entity.id);
 
         await prisma.memoryEntity.create({
           data: {
@@ -207,23 +241,9 @@ export async function POST(request: NextRequest) {
 
       // Add places
       for (const place of extractedData.places) {
-        const entity = await prisma.entity.upsert({
-          where: {
-            userId_name_type: {
-              userId: user.id,
-              name: place.name,
-              type: "PLACE",
-            },
-          },
-          update: {},
-          create: {
-            userId: user.id,
-            name: place.name,
-            type: "PLACE",
-            attributes: { placeType: place.type },
-          },
-        });
-        entityMap[place.name] = entity.id;
+        if (!shouldProcess(place.name)) continue;
+        const entity = await upsertEntity({ name: place.name, type: "PLACE" }, { attributes: { placeType: place.type } });
+        rememberEntity(place.name, entity.id);
 
         await prisma.memoryEntity.create({
           data: {
@@ -235,23 +255,9 @@ export async function POST(request: NextRequest) {
 
       // Add projects
       for (const project of extractedData.projects) {
-        const entity = await prisma.entity.upsert({
-          where: {
-            userId_name_type: {
-              userId: user.id,
-              name: project.name,
-              type: "PROJECT",
-            },
-          },
-          update: {},
-          create: {
-            userId: user.id,
-            name: project.name,
-            type: "PROJECT",
-            attributes: { status: project.status },
-          },
-        });
-        entityMap[project.name] = entity.id;
+        if (!shouldProcess(project.name)) continue;
+        const entity = await upsertEntity({ name: project.name, type: "PROJECT" }, { attributes: { status: project.status } });
+        rememberEntity(project.name, entity.id);
 
         await prisma.memoryEntity.create({
           data: {
@@ -263,22 +269,9 @@ export async function POST(request: NextRequest) {
 
       // Add topics
       for (const topic of extractedData.topics) {
-        const entity = await prisma.entity.upsert({
-          where: {
-            userId_name_type: {
-              userId: user.id,
-              name: topic.name,
-              type: "TOPIC",
-            },
-          },
-          update: {},
-          create: {
-            userId: user.id,
-            name: topic.name,
-            type: "TOPIC",
-          },
-        });
-        entityMap[topic.name] = entity.id;
+        if (!shouldProcess(topic.name)) continue;
+        const entity = await upsertEntity({ name: topic.name, type: "TOPIC" }, {});
+        rememberEntity(topic.name, entity.id);
 
         await prisma.memoryEntity.create({
           data: {
@@ -290,23 +283,9 @@ export async function POST(request: NextRequest) {
 
       // Add events
       for (const event of extractedData.events) {
-        const entity = await prisma.entity.upsert({
-          where: {
-            userId_name_type: {
-              userId: user.id,
-              name: event.name,
-              type: "EVENT",
-            },
-          },
-          update: {},
-          create: {
-            userId: user.id,
-            name: event.name,
-            type: "EVENT",
-            attributes: { date: event.date },
-          },
-        });
-        entityMap[event.name] = entity.id;
+        if (!shouldProcess(event.name)) continue;
+        const entity = await upsertEntity({ name: event.name, type: "EVENT" }, { attributes: { date: event.date } });
+        rememberEntity(event.name, entity.id);
 
         await prisma.memoryEntity.create({
           data: {
@@ -318,8 +297,8 @@ export async function POST(request: NextRequest) {
 
       // 5. Create relationships
       for (const rel of extractedData.relationships) {
-        const fromId = entityMap[rel.from];
-        const toId = entityMap[rel.to];
+        const fromId = entityMap[normalizeEntityName(rel.from)];
+        const toId = entityMap[normalizeEntityName(rel.to)];
 
         if (fromId && toId) {
           await prisma.entityRelation.upsert({

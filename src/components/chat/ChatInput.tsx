@@ -36,7 +36,7 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
     if (!message.trim() || isLoading || isPending) return;
 
     const nextMessage = message;
-    const nextMode = detectedMode;
+    const nextMode = effectiveMode;
 
     const delay =
       nextMode === "store"
@@ -63,8 +63,9 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
     }
   };
 
-  const detectedMode: ChatMode = message.trim() && isQuestionLike(message) ? "ask" : mode;
-  const isAsk = detectedMode === "ask";
+  const isQuestion = Boolean(message.trim()) && isQuestionLike(message);
+  const effectiveMode: ChatMode = mode === "agent" ? "agent" : isQuestion ? "ask" : mode;
+  const isAsk = effectiveMode === "ask";
 
   return (
     <form onSubmit={handleSubmit} className="fyi-input-panel px-3 py-3 md:px-4 md:py-4">
@@ -79,9 +80,9 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
             onClick={() => setMode("store")}
             className={
               "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] transition-colors md:text-label-sm md:tracking-normal " +
-              (detectedMode === "store" ? "bg-white/10" : "opacity-70 hover:opacity-100")
+              (effectiveMode === "store" ? "bg-white/10" : "opacity-70 hover:opacity-100")
             }
-            aria-pressed={detectedMode === "store"}
+            aria-pressed={effectiveMode === "store"}
             aria-label="Switch to Store mode — statements will be saved"
             style={{ color: "var(--fyi-accent)" }}
           >
@@ -93,9 +94,9 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
             onClick={() => setMode("ask")}
             className={
               "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] transition-colors md:text-label-sm md:tracking-normal " +
-              (detectedMode === "ask" ? "bg-white/10" : "opacity-70 hover:opacity-100")
+              (effectiveMode === "ask" ? "bg-white/10" : "opacity-70 hover:opacity-100")
             }
-            aria-pressed={detectedMode === "ask"}
+            aria-pressed={effectiveMode === "ask"}
             aria-label="Switch to Ask mode — questions will not be stored"
             style={{ color: "var(--fyi-accent-2)" }}
           >
@@ -107,9 +108,9 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
             onClick={() => setMode("agent")}
             className={
               "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] transition-colors md:text-label-sm md:tracking-normal " +
-              (mode === "agent" ? "bg-white/10" : "opacity-70 hover:opacity-100")
+              (effectiveMode === "agent" ? "bg-white/10" : "opacity-70 hover:opacity-100")
             }
-            aria-pressed={mode === "agent"}
+            aria-pressed={effectiveMode === "agent"}
             style={{ color: "var(--fyi-highlight)" }}
           >
             <span className="material-symbols-outlined text-base">psychology</span>
@@ -162,7 +163,7 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
       <span className="sr-only" aria-live="polite">
         {isLoading || isPending
           ? "Processing"
-          : `${detectedMode === "ask" ? "Ask" : "Store"} mode ready`}
+          : `${effectiveMode === "agent" ? "Agent" : effectiveMode === "ask" ? "Ask" : "Store"} mode ready`}
       </span>
     </form>
   );
