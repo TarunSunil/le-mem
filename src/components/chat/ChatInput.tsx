@@ -17,6 +17,7 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const lastInputAtRef = useRef<number>(Date.now());
   const pendingTimeoutRef = useRef<number | null>(null);
+  const focusScrollTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -28,6 +29,9 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
   useEffect(() => () => {
     if (pendingTimeoutRef.current) {
       window.clearTimeout(pendingTimeoutRef.current);
+    }
+    if (focusScrollTimeoutRef.current) {
+      window.clearTimeout(focusScrollTimeoutRef.current);
     }
   }, []);
 
@@ -58,9 +62,30 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && e.ctrlKey && !isLoading && !isPending) {
+    // Enter sends — matching the mobile keyboard's "send" action key — while
+    // Shift+Enter still inserts a newline for multi-line notes. isComposing
+    // guards against IME candidate confirmation (e.g. typing in Japanese/Chinese).
+    if (
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      !e.nativeEvent.isComposing &&
+      !isLoading &&
+      !isPending
+    ) {
+      e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
     }
+  };
+
+  const handleFocus = () => {
+    // Give the mobile keyboard time to animate in, then bring the input
+    // back above the fold so it isn't hidden behind the keyboard.
+    if (focusScrollTimeoutRef.current) {
+      window.clearTimeout(focusScrollTimeoutRef.current);
+    }
+    focusScrollTimeoutRef.current = window.setTimeout(() => {
+      textareaRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }, 300);
   };
 
   const isQuestion = Boolean(message.trim()) && isQuestionLike(message);
@@ -68,10 +93,10 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
   const isAsk = effectiveMode === "ask";
 
   return (
-    <form onSubmit={handleSubmit} className="fyi-input-panel px-3 py-3 md:px-4 md:py-4">
-      <div className="flex flex-wrap items-center gap-2 md:gap-3">
+    <form onSubmit={handleSubmit} className="fyi-input-panel px-2.5 py-2.5 sm:px-3 sm:py-3 md:px-4 md:py-4">
+      <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
         <div
-          className="flex items-center rounded-full border border-white/10 bg-white/5 p-1"
+          className="flex shrink-0 items-center rounded-full border border-white/10 bg-white/5 p-1"
           role="tablist"
           aria-label="Chat mode"
         >
@@ -79,7 +104,7 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
             type="button"
             onClick={() => setMode("store")}
             className={
-              "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] transition-colors md:text-label-sm md:tracking-normal " +
+              "flex touch-manipulation items-center gap-1 rounded-full px-2 py-1.5 text-[11px] uppercase tracking-[0.2em] transition-colors sm:px-3 sm:py-1 md:text-label-sm md:tracking-normal " +
               (effectiveMode === "store" ? "bg-white/10" : "opacity-70 hover:opacity-100")
             }
             aria-pressed={effectiveMode === "store"}
@@ -87,13 +112,13 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
             style={{ color: "var(--fyi-accent)" }}
           >
             <span className="material-symbols-outlined text-base">save</span>
-            Store
+            <span className="hidden sm:inline">Store</span>
           </button>
           <button
             type="button"
             onClick={() => setMode("ask")}
             className={
-              "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] transition-colors md:text-label-sm md:tracking-normal " +
+              "flex touch-manipulation items-center gap-1 rounded-full px-2 py-1.5 text-[11px] uppercase tracking-[0.2em] transition-colors sm:px-3 sm:py-1 md:text-label-sm md:tracking-normal " +
               (effectiveMode === "ask" ? "bg-white/10" : "opacity-70 hover:opacity-100")
             }
             aria-pressed={effectiveMode === "ask"}
@@ -101,20 +126,20 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
             style={{ color: "var(--fyi-accent-2)" }}
           >
             <span className="material-symbols-outlined text-base">manage_search</span>
-            Ask
+            <span className="hidden sm:inline">Ask</span>
           </button>
           <button
             type="button"
             onClick={() => setMode("agent")}
             className={
-              "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] transition-colors md:text-label-sm md:tracking-normal " +
+              "flex touch-manipulation items-center gap-1 rounded-full px-2 py-1.5 text-[11px] uppercase tracking-[0.2em] transition-colors sm:px-3 sm:py-1 md:text-label-sm md:tracking-normal " +
               (effectiveMode === "agent" ? "bg-white/10" : "opacity-70 hover:opacity-100")
             }
             aria-pressed={effectiveMode === "agent"}
             style={{ color: "var(--fyi-highlight)" }}
           >
             <span className="material-symbols-outlined text-base">psychology</span>
-            Agent
+            <span className="hidden sm:inline">Agent</span>
           </button>
         </div>
 
@@ -126,14 +151,12 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
             setMessage(e.target.value);
           }}
           onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
           rows={1}
           disabled={isLoading || isPending}
-          placeholder={
-            isAsk
-              ? "Ask anything about your memories..."
-              : "Describe a memory, paste a note, add a fact..."
-          }
-          className="max-h-36 w-full flex-1 resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-on-surface-variant disabled:opacity-50 md:max-h-40 md:text-body-md md:leading-7"
+          enterKeyHint="send"
+          placeholder={isAsk ? "Ask about your memories..." : "Add a memory or note..."}
+          className="max-h-36 w-full flex-1 resize-none bg-transparent text-base leading-6 outline-none placeholder:text-on-surface-variant disabled:opacity-50 md:max-h-40 md:text-body-md md:leading-7"
           aria-label="Memory input"
         />
 
@@ -141,7 +164,7 @@ export function ChatInput({ onSend, isLoading = false, initialMessage = "" }: Ch
           type="submit"
           disabled={!message.trim() || isLoading || isPending}
           aria-label="Send message"
-          className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 md:h-11 md:w-11"
+          className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 md:h-12 md:w-12"
           style={
             isAsk
               ? {

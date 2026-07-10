@@ -248,7 +248,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100dvh-4.25rem)] flex-col">
+    <div className="flex min-h-[calc(100dvh-4.25rem-env(safe-area-inset-bottom))] flex-col">
       <header
         className="md:hidden fixed top-0 left-0 right-0 z-40 border-b"
         style={{ backgroundColor: "var(--fyi-bg)", borderColor: "var(--fyi-border)" }}
@@ -263,7 +263,7 @@ export default function ChatPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 pt-10 pb-24 md:px-container-padding md:pt-8 md:pb-28">
+      <div className="flex-1 overflow-y-auto px-3 pt-10 pb-24 md:px-container-padding md:pt-8 md:pb-28">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 md:gap-6">
           <section className="glass-panel rounded-2xl border border-white/10 px-4 py-4 md:rounded-3xl md:px-8 md:py-6">
             <div className="max-w-2xl">
@@ -304,7 +304,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="input-gradient mt-auto border-t border-white/5 px-4 pb-3 pt-4 md:px-container-padding md:pb-6 md:pt-5">
+      <div className="input-gradient mt-auto border-t border-white/5 px-3 pb-3 pt-3 md:px-container-padding md:pb-6 md:pt-5">
         <div className="mx-auto w-full max-w-4xl">
           <ChatInput onSend={handleSendMessage} isLoading={isLoading} initialMessage={prefill} />
         </div>
